@@ -1,14 +1,19 @@
 import datetime
 import sys
 import tkinter
+import types
 import typing
 from tkinter.ttk import Treeview
 from tkinter import *
 from tkinter import font
-from PIL import Image
 
 import pillpackData
 import scriptScanner
+
+consts = types.SimpleNamespace()
+consts.HOME_SCREEN = "HomeScreen"
+consts.VIEW_PATIENT_SCREEN = "ViewPatientScreen"
+consts.VIEW_CHANGES_SCREEN = "ViewChanges"
 
 script_dir = sys.path[0]
 resources_dir = script_dir + "\\Resources"
@@ -45,23 +50,26 @@ collected_patients: scriptScanner.CollectedPatients = scriptScanner.CollectedPat
 #        self.dark_mode_toggle.grid(row=0, column=0, sticky="w")
 
 
-class OptionSelectFrame(Frame):
-    def __init__(self, master, option_title, option_image, function, row, col, **kwargs):
-        super().__init__(master, **kwargs)
-        self.font = font.Font(family='Verdana', size=18, weight="normal")
-        self.grid_rowconfigure((0, 1, 2), weight=1)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure((2, 3), weight=0)
-        self.labels = []
-        self.buttons = []
-        label = Label(self, text=option_title, font=self.font)
-        button_image = tkinter.Image(light_image=Image.open(option_image), dark_image=Image.open(option_image),
-                                size=(64, 64), imgtype="png")
-        button = Button(self, text="", image=button_image, command=function, width=5, height=5)
-        label.grid(row=row, column=col, padx=50, pady=(10, 0), sticky="ew")
-        button.grid(row=row+1, column=col, padx=50, pady=(10, 0), sticky="w")
-        self.labels.append(label)
-        self.buttons.append(button)
+class Observer:
+    def __init__(self):
+        self.connected_views: list = []
+
+    def connect(self, view_to_connect):
+        if not self.connected_views.__contains__(view_to_connect):
+            self.connected_views.append(view_to_connect)
+
+    def clear(self):
+        self.connected_views.clear()
+
+    def update(self, view_to_update):
+        if self.connected_views.__contains__(view_to_update):
+            update_method = getattr(view_to_update, "update", None)
+            if callable(update_method):
+                view_to_update.update()
+
+    def update_all(self):
+        for view in self.connected_views:
+            self.update(view)
 
 
 class App(tkinter.Tk):
@@ -73,23 +81,78 @@ class App(tkinter.Tk):
         self.geometry("1080x720")
         self.title("Pillpack Script Checker")
         self.collected_patients = scriptScanner.CollectedPatients()
+        self.app_observer: Observer = Observer()
         self.total_medications = 0
         self.title_font = font.Font(family='Verdana', size=28, weight="bold")
         self.container = Frame(self)
         self.container.pack(side="top", fill="both", expand=True)
-        self.show_frame()
+        self.show_frame(consts.HOME_SCREEN)
 
         #set_appearance_mode("dark")
 
-    def show_frame(self, patient_to_view: pillpackData.PillpackPatient = None):
-        if patient_to_view is None:
-            frame: HomeScreen = HomeScreen(parent=self.container, master=self)
-            frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
-            frame.tkraise()
-        elif isinstance(patient_to_view, pillpackData.PillpackPatient):
-            frame: Frame = PatientMedicationDetails(parent=self.container, master=self, patient=patient_to_view)
-            frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
-            frame.tkraise()
+    def show_frame(self, view_name: str, patient_to_view: pillpackData.PillpackPatient = None):
+        match view_name:
+            case consts.HOME_SCREEN:
+                frame: HomeScreen = HomeScreen(parent=self.container, master=self)
+                self.app_observer.connect(frame)
+                frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
+                frame.tkraise()
+            case consts.VIEW_PATIENT_SCREEN:
+                if isinstance(patient_to_view, pillpackData.PillpackPatient):
+                    frame: Frame = PatientMedicationDetails(parent=self.container, master=self, patient=patient_to_view)
+                    self.app_observer.connect(frame)
+                    frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
+                    frame.tkraise()
+            case consts.VIEW_CHANGES_SCREEN:
+                frame: ViewChanges = ViewChanges(parent=self.container, master=self)
+                self.app_observer.connect(frame)
+                frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
+                frame.tkraise()
+
+
+class SideBar(Frame):
+    def __init__(self, parent, master: App):
+        Frame.__init__(self, parent)
+        self.configure(width=50, height=master.winfo_height())
+        self.master: App = master
+        self.script_window = None
+        self.view_patients_button = Button(self, text="Home Screen",
+                                           command=lambda: self.master.show_frame(consts.HOME_SCREEN))
+        self.view_patients_button.grid(row=0, column=0, pady=10)
+        self.scan_scripts_button = Button(self, text="Scan Scripts",
+                                          command=lambda: self.check_if_pillpack_data_is_loaded())
+        self.scan_scripts_button.grid(row=1, column=0, pady=50)
+        self.view_changes_button = Button(self, text="View changes",
+                                          command=lambda: self.master.show_frame(consts.VIEW_CHANGES_SCREEN))
+        self.view_changes_button.grid(row=2, column=0, pady=50)
+        self.archive_production_data_button = Button(self, text="Archive Production Data")
+        self.archive_production_data_button.grid(row=3, column=0)
+
+    def check_if_pillpack_data_is_loaded(self):
+        if len(self.master.collected_patients.pillpack_patient_dict) == 0:
+            warning = Toplevel(master=self.master)
+            warning.geometry("400x200")
+            warning_label = Label(warning, text="You have not loaded any pillpack production data! "
+                                                "It is highly recommended that you do this before "
+                                                "scanning in scripts.",
+                                  wraplength=200)
+            warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+            go_back_button = Button(warning, text="Go back", command=warning.destroy)
+            go_back_button.grid(row=1, column=0, padx=50, sticky="ew")
+            continue_button = Button(warning, text="Continue anyway",
+                                     command=lambda: [warning.destroy(),
+                                                      self.open_scan_scripts_window()
+                                                      ])
+            continue_button.grid(row=1, column=1, padx=50, sticky="ew")
+        else:
+            self.open_scan_scripts_window()
+
+    def open_scan_scripts_window(self):
+        if self.script_window is None or not self.script_window.winfo_exists():
+            self.script_window = ScanScripts(self, self.master)  # create window if its None or destroyed
+            self.script_window.grab_set()
+        else:
+            self.script_window.focus()  # if window exists focus it
 
 
 class HomeScreen(Frame):
@@ -104,15 +167,17 @@ class HomeScreen(Frame):
         ready_to_produce_path = icons_dir + "\\check.png"
         ready_to_produce = PhotoImage(file=ready_to_produce_path)
         self.ready_to_produce = ready_to_produce.subsample(30, 30)
-        title_label = Label(self, text="Pillpack Script Checker", font=self.master.title_font,
-                            justify="center")
-        title_label.grid(row=0, column=0, pady=20, columnspan=2)
+        side_bar = SideBar(self, self.master)
+        side_bar.pack(side="left", fill="both")
 
-        options_frame = tkinter.ttk.Frame(self)
+        container_frame = tkinter.ttk.Frame(self)
+        container_frame.pack(side="top", fill="both")
+
+        options_frame = tkinter.ttk.Frame(container_frame)
         options_frame.columnconfigure(0, weight=1)
         options_frame.columnconfigure(1, weight=1)
         options_frame.columnconfigure(2, weight=1)
-        options_frame.grid(row=1, column=0, pady=(25, 5), sticky="ew")
+        options_frame.grid(row=0, column=1, pady=(25, 5), sticky="ew")
         load_pillpack_image = icons_dir + "\\pillpack-data.png"
         load_pillpack_label = Label(options_frame, text="Load Pillpack Production Data", font=self.font, wraplength=150,
                                     justify="center")
@@ -141,7 +206,7 @@ class HomeScreen(Frame):
         scan_scripts_button_image = PhotoImage(file=scan_scripts_image)
         self.scripts_button_image = scan_scripts_button_image.subsample(5, 5)
         scan_scripts_button = Button(options_frame, image=self.scripts_button_image,
-                                     command=lambda: self.open_scan_scripts_window())
+                                     command=lambda: self.check_if_pillpack_data_is_loaded())
         scan_scripts_label.grid(row=1, column=1, sticky="nsew")
         scan_scripts_button.grid(row=2, column=1, sticky="nsew")
 
@@ -154,8 +219,8 @@ class HomeScreen(Frame):
         archive_production_label.grid(row=1, column=2, sticky="nsew")
         archive_production_button.grid(row=2, column=2, sticky="nsew")
 
-        paned_window = tkinter.ttk.PanedWindow(self)
-        paned_window.grid(row=3, column=0, pady=(25, 5), sticky="nsew", rowspan=4)
+        paned_window = tkinter.ttk.PanedWindow(container_frame)
+        paned_window.grid(row=3, column=1, pady=(25, 5), sticky="nsew", rowspan=4)
 
         paned_frame = tkinter.ttk.Frame(paned_window)
         paned_window.add(paned_frame, weight=1)
@@ -303,6 +368,38 @@ class HomeScreen(Frame):
                         else:
                             tree_to_refresh.set(key, 'Condition', "No scripts scanned")
 
+    def update(self):
+        self.refresh_treeview(self.production_patients_tree,
+                              self.master.collected_patients.pillpack_patient_dict),
+
+        self.refresh_treeview(self.perfect_patients_tree,
+                              self.master.collected_patients.matched_patients),
+
+        self.refresh_treeview(self.imperfect_patients_tree,
+                              self.master.collected_patients.minor_mismatch_patients),
+
+        self.refresh_treeview(self.mismatched_patients_tree,
+                              self.master.collected_patients.severe_mismatch_patients)
+
+    def check_if_pillpack_data_is_loaded(self):
+        if len(self.master.collected_patients.pillpack_patient_dict) == 0:
+            warning = Toplevel(master=self.master)
+            warning.geometry("400x200")
+            warning_label = Label(warning, text="You have not loaded any pillpack production data! "
+                                                "It is highly recommended that you do this before "
+                                                "scanning in scripts.",
+                                  wraplength=200)
+            warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+            go_back_button = Button(warning, text="Go back", command=warning.destroy)
+            go_back_button.grid(row=1, column=0, padx=50, sticky="ew")
+            continue_button = Button(warning, text="Continue anyway",
+                                     command=lambda: [warning.destroy(),
+                                                      self.open_scan_scripts_window()
+                                                      ])
+            continue_button.grid(row=1, column=1, padx=50, sticky="ew")
+        else:
+            self.open_scan_scripts_window()
+
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
             self.script_window = ScanScripts(self, self.master)  # create window if its None or destroyed
@@ -324,7 +421,7 @@ class HomeScreen(Frame):
                                           )
                                          )
                     selected_patient = filtered_patients[0]
-                    self.master.show_frame(selected_patient)
+                    self.master.show_frame(consts.VIEW_PATIENT_SCREEN, selected_patient)
             except IndexError as e:
                 print("IndexError: ", e)
 
@@ -335,117 +432,255 @@ class PatientMedicationDetails(Frame):
         self.font = font.Font(family='Verdana', size=14, weight="normal")
         self.home_screen: HomeScreen = parent
         self.master: App = master
+        side_bar = SideBar(self, self.master)
+        side_bar.pack(side="left", fill="both")
         self.patient_object: pillpackData.PillpackPatient = patient
         self.patient_tree_key = self.patient_object.first_name + " " + self.patient_object.last_name
 
-        display_frame = tkinter.ttk.Frame(self)
-        display_frame.columnconfigure(0, weight=0)
-        display_frame.columnconfigure(1, weight=2)
-        display_frame.grid(row=0, column=0, sticky="ew")
+        container_frame = tkinter.ttk.Frame(self)
+        container_frame.pack(side="top", fill="both", expand=1)
 
-        test_label = Label(display_frame, font=self.font,
+        self.display_canvas = tkinter.Canvas(container_frame, width=2000)
+        self.display_canvas.pack(side="left", fill="both", expand=1)
+
+        my_scrollbar = tkinter.ttk.Scrollbar(self.display_canvas, orient=VERTICAL, command=self.display_canvas.yview)
+        my_scrollbar.pack(side="right", fill=Y)
+
+        # configure the canvas
+        self.display_canvas.configure(yscrollcommand=my_scrollbar.set)
+        self.display_canvas.bind(
+            '<Configure>', lambda e: self.display_canvas.configure(scrollregion=self.display_canvas.bbox("all"))
+        )
+
+        self.display_frame = tkinter.ttk.Frame(self.display_canvas, width=2000)
+
+        patient_name_label = Label(self.display_frame, font=self.font,
                            text=self.patient_tree_key)
-        test_label.grid(row=0, column=0)
+        patient_name_label.grid(row=0, column=0)
 
-        back_button = Button(display_frame, text="Go back",
-                             command=self.master.show_frame)
-        back_button.grid(row=1, column=0)
+        self.production_medication_frame = LabelFrame(self.display_frame)
+        self.production_medication_frame.columnconfigure(0, weight=1)
+        self.production_medication_frame.columnconfigure(1, weight=2)
+        production_medication_label = Label(self.display_frame, text="All Production Medications")
+        production_medication_label.grid(row=1, column=0)
+        self.production_medication_frame.grid(row=2, column=0, padx=20, pady=20, sticky="ew")
 
-        test_label_2 = Label(display_frame, font=self.font, text="This is another label")
-        test_label_2.grid(row=0, column=1)
+        production_medication_name_label = Label(self.production_medication_frame, text="Medication Name")
+        production_medication_name_label.grid(row=0, column=0)
+        production_medication_dosage_label = Label(self.production_medication_frame, text="Dosage")
+        production_medication_dosage_label.grid(row=0, column=1)
 
-        self.production_medication_treeview = Treeview(display_frame,
-                                                       columns='Dosage',
-                                                       height=5)
+        self.matched_medication_frame = LabelFrame(self.display_frame)
+        self.matched_medication_frame.columnconfigure(0, weight=1)
+        self.matched_medication_frame.columnconfigure(1, weight=2)
+        matched_medication_label = Label(self.display_frame, text="Matched Medications")
+        matched_medication_label.grid(row=3, column=0, pady=20)
+        self.matched_medication_frame.grid(row=4, column=0, padx=20, pady=20, sticky="ew")
 
-        self.production_medication_treeview.heading('#0', text="All Production Medications")
-        self.production_medication_treeview.heading('Dosage', text="Dosage")
-        self.production_medication_treeview.grid(row=1, column=1, sticky="ew")
+        matched_medication_name_label = Label(self.matched_medication_frame, text="Medication Name")
+        matched_medication_name_label.grid(row=0, column=0)
+        matched_medication_dosage_label = Label(self.matched_medication_frame, text="Dosage")
+        matched_medication_dosage_label.grid(row=0, column=1)
 
-        self.matched_medication_treeview = Treeview(display_frame,
-                                                    columns='Dosage',
-                                                    height=5)
+        self.missing_medication_frame = LabelFrame(self.display_frame)
+        self.missing_medication_frame.columnconfigure(0, weight=1)
+        self.missing_medication_frame.columnconfigure(1, weight=2)
+        missing_medication_label = Label(self.display_frame, text="Missing Medications")
+        missing_medication_label.grid(row=5, column=0, pady=20)
+        self.missing_medication_frame.grid(row=6, column=0, padx=20, pady=20, sticky="ew")
 
-        self.matched_medication_treeview.heading('#0', text="Matched Medications")
-        self.matched_medication_treeview.heading('Dosage', text="Dosage")
-        self.matched_medication_treeview.grid(row=1, column=2, sticky="ew")
+        missing_medication_name_label = Label(self.missing_medication_frame, text="Medication Name")
+        missing_medication_name_label.grid(row=0, column=0)
+        missing_medication_dosage_label = Label(self.missing_medication_frame, text="Dosage")
+        missing_medication_dosage_label.grid(row=0, column=1)
 
-        self.missing_medication_treeview = Treeview(display_frame,
-                                                    columns='Dosage',
-                                                    height=5)
+        self.unknown_medication_frame = LabelFrame(self.display_frame)
+        self.unknown_medication_frame.columnconfigure(0, weight=1)
+        self.unknown_medication_frame.columnconfigure(1, weight=2)
+        unknown_medication_label = Label(self.display_frame, text="Unknown Medications")
+        unknown_medication_label.grid(row=7, column=0, pady=20)
+        self.unknown_medication_frame.grid(row=8, column=0, padx=20, pady=20, sticky="ew")
 
-        self.missing_medication_treeview.heading('#0', text="Missing Medications")
-        self.missing_medication_treeview.heading('Dosage', text="Dosage")
-        self.missing_medication_treeview.grid(row=2, column=1, sticky="ew")
+        unknown_medication_name_label = Label(self.unknown_medication_frame, text="Medication Name")
+        unknown_medication_name_label.grid(row=0, column=0)
+        unknown_medication_dosage_label = Label(self.unknown_medication_frame, text="Dosage")
+        unknown_medication_dosage_label.grid(row=0, column=1)
 
-        self.unknown_medication_treeview = Treeview(display_frame,
-                                                    columns='Dosage',
-                                                    height=5)
+        self.incorrect_medication_dosage_frame = LabelFrame(self.display_frame)
+        self.incorrect_medication_dosage_frame.columnconfigure(0, weight=1)
+        self.incorrect_medication_dosage_frame.columnconfigure(1, weight=2)
+        incorrect_medication_dosage_label = Label(self.display_frame,
+                                                  text="Incorrect Dosage Medications")
+        incorrect_medication_dosage_label.grid(row=9, column=0, pady=20)
+        self.incorrect_medication_dosage_frame.grid(row=10, column=0, padx=20, pady=20, sticky="ew", columnspan=2)
 
-        self.unknown_medication_treeview.heading('#0', text="Unknown Medications")
-        self.unknown_medication_treeview.heading('Dosage', text="Dosage")
-        self.unknown_medication_treeview.grid(row=2, column=2, sticky="ew")
+        incorrect_medication_dosage_name_label = Label(self.incorrect_medication_dosage_frame, text="Medication Name")
+        incorrect_medication_dosage_name_label.grid(row=0, column=0)
+        incorrect_medication_dosage_in_production_label = Label(self.incorrect_medication_dosage_frame,
+                                                                text="Dosage in Production")
+        incorrect_medication_dosage_in_production_label.grid(row=0, column=1)
+        incorrect_medication_dosage_on_script_label = Label(self.incorrect_medication_dosage_frame,
+                                                            text="Dosage on Script")
+        incorrect_medication_dosage_on_script_label.grid(row=0, column=2)
 
-        incorrect_dosage_frame = tkinter.ttk.Frame(self)
-        incorrect_dosage_frame.columnconfigure(0, weight=0)
-        incorrect_dosage_frame.columnconfigure(1, weight=2)
-        incorrect_dosage_frame.grid(row=1, column=0, sticky="ew")
+        self.medication_changes_frame = LabelFrame(self.display_frame)
+        self.medication_changes_frame.columnconfigure(0, weight=1)
+        self.medication_changes_frame.columnconfigure(1, weight=2)
+        medication_changes_label = Label(self.display_frame,
+                                         text="Medication Changes to be Made")
+        medication_changes_label.grid(row=11, column=0, pady=20)
+        self.medication_changes_frame.grid(row=12, column=0, padx=20, pady=20, sticky="ew", columnspan=2)
 
-        self.incorrect_dosages_treeview = Treeview(incorrect_dosage_frame,
-                                                   columns=('Recorded Dosage',
-                                                            'Dosage on Script'),
-                                                   height=5)
+        medication_to_be_changed_name_label = Label(self.medication_changes_frame, text="Medication Name")
+        medication_to_be_changed_name_label.grid(row=0, column=0)
+        medication_to_be_changed_dosage_label = Label(self.medication_changes_frame, text="Dosage")
+        medication_to_be_changed_dosage_label.grid(row=0, column=1)
+        medication_to_be_changed_note_label = Label(self.medication_changes_frame, text="Change Notes")
+        medication_to_be_changed_note_label.grid(row=0, column=2)
 
-        self.incorrect_dosages_treeview.heading('#0', text="Incorrect Dosages")
-        self.incorrect_dosages_treeview.heading('Recorded Dosage', text="Recorded Dosage")
-        self.incorrect_dosages_treeview.heading('Dosage on Script', text="Dosage on Script")
-        self.incorrect_dosages_treeview.grid(row=3, column=1, sticky="ew")
+        self.prn_medications_frame = LabelFrame(self.display_frame)
+        self.prn_medications_frame.columnconfigure(0, weight=1)
+        self.prn_medications_frame.columnconfigure(1, weight=2)
+        prn_medications_label = Label(self.display_frame,
+                                      text="PRN Medications Outside Pillpack")
+        prn_medications_label.grid(row=13, column=0, pady=20)
+        self.prn_medications_frame.grid(row=14, column=0, padx=20, pady=20, sticky="ew")
 
-        self.matched_medication_treeview.tag_configure('matched', background='#2f8000')
-        self.missing_medication_treeview.tag_configure('missing', background='#a8a82c')
-        self.unknown_medication_treeview.tag_configure('unknown', background='#a30202')
-        self.incorrect_dosages_treeview.tag_configure('bad dosage', background='#a8a82c')
+        prn_medication_name_label = Label(self.prn_medications_frame, text="Medication Name")
+        prn_medication_name_label.grid(row=0, column=0)
+        prn_medication_dosage_label = Label(self.prn_medications_frame, text="Dosage")
+        prn_medication_dosage_label.grid(row=0, column=1)
 
-        self.populate_treeview(self.production_medication_treeview, self.patient_object.medication_dict)
-        self.populate_treeview(self.matched_medication_treeview, self.patient_object.matched_medications_dict,
-                               "matched")
-        self.populate_treeview(self.missing_medication_treeview, self.patient_object.missing_medications_dict,
-                               "missing")
-        self.populate_treeview(self.unknown_medication_treeview, self.patient_object.unknown_medications_dict,
-                               "unknown")
-        self.populate_incorrect_dosages_treeview()
+        self.display_canvas.create_window((0, 0), window=self.display_frame, anchor="nw")
+
+        self.update()
 
     @staticmethod
-    def populate_treeview(treeview_to_populate: Treeview, medication_dict: dict, tag: str = ""):
-        medicine_dict_values = medication_dict.values()
-        for medication in medicine_dict_values:
+    def populate_label_frame(label_frame_to_populate: LabelFrame, dictionary_to_iterate: dict,
+                             include_changes_button: bool = False, include_prn_medications_button: bool = False):
+        dictionary_values: list = list(dictionary_to_iterate.values())
+        for i in range(0, len(dictionary_values)):
+            medication = dictionary_values[i]
             if isinstance(medication, pillpackData.Medication):
-                medication_key = medication.medication_name + " " + str(medication.dosage)
-                if not treeview_to_populate.exists(medication_key):
-                    treeview_to_populate.insert('', 'end', medication_key,
-                                                text=medication.medication_name,
-                                                tags=tag)
-                treeview_to_populate.set(medication_key, 'Dosage', medication.dosage)
+                medication_name_label = Label(label_frame_to_populate, text=medication.medication_name)
+                medication_dosage_label = Label(label_frame_to_populate, text=medication.dosage)
+                medication_name_label.grid(row=i+1, column=0)
+                medication_dosage_label.grid(row=i+1, column=1)
+                if include_changes_button:
+                    add_medication_to_changes_button = Button(label_frame_to_populate, text="Add to Changes")
+                    add_medication_to_changes_button.grid(row=i+1, column=2)
+                if include_prn_medications_button:
+                    make_prn_medication_button = Button(label_frame_to_populate, text="Set as PRN")
+                    make_prn_medication_button.grid(row=i+1, column=3)
 
-    def populate_incorrect_dosages_treeview(self):
-        incorrect_dosages_values = self.patient_object.incorrect_dosages_dict.values()
-        for medication in incorrect_dosages_values:
+    def populate_incorrect_dosages_treeview(self, incorrect_medication_dosage_frame):
+        incorrect_dosages_values = list(self.patient_object.incorrect_dosages_dict.values())
+        for i in range(0, len(incorrect_dosages_values)):
+            medication = incorrect_dosages_values[i]
             if isinstance(medication, pillpackData.Medication):
-                medication_key = medication.medication_name + " " + str(medication.dosage)
-                if not self.incorrect_dosages_treeview.exists(medication_key):
-                    self.incorrect_dosages_treeview.insert('', 'end', medication_key,
-                                                           text=medication.medication_name,
-                                                           tags="missing")
                 if self.patient_object.medication_dict.__contains__(medication.medication_name):
                     medication_in_production: pillpackData.Medication = self.patient_object.medication_dict.get(
-                        medication.medication_name)
-                    self.incorrect_dosages_treeview.set(medication_key, 'Recorded Dosage',
-                                                        medication_in_production.dosage)
-                self.incorrect_dosages_treeview.set(medication_key, 'Dosage on Script', medication.dosage)
+                        medication.medication_name
+                    )
+                    medication_name_label = Label(incorrect_medication_dosage_frame, text=medication.medication_name)
+                    medication_dosage_in_production_label = Label(incorrect_medication_dosage_frame,
+                                                                  text=medication_in_production.dosage)
+                    medication_dosage_on_script_label = Label(incorrect_medication_dosage_frame,
+                                                              text=medication.dosage)
+                    medication_name_label.grid(row=i + 1, column=0)
+                    medication_dosage_in_production_label.grid(row=i + 1, column=1)
+                    medication_dosage_on_script_label.grid(row=i + 1, column=2)
+
+    def update(self):
+        self.populate_label_frame(self.production_medication_frame, self.patient_object.medication_dict)
+        self.populate_label_frame(self.matched_medication_frame, self.patient_object.matched_medications_dict)
+        self.populate_label_frame(self.missing_medication_frame, self.patient_object.missing_medications_dict,
+                                  True, True)
+        self.populate_label_frame(self.unknown_medication_frame, self.patient_object.unknown_medications_dict,
+                                  True, True)
+        self.populate_incorrect_dosages_treeview(self.incorrect_medication_dosage_frame)
+
+        self.display_canvas.update_idletasks()
+        self.display_canvas.config(scrollregion=self.display_frame.bbox())
+
+
+class ViewChanges(Frame):
+    def __init__(self, parent, master: App):
+        Frame.__init__(self, parent)
+        self.master: App = master
+
+        side_bar = SideBar(self, self.master)
+        side_bar.pack(side="left", fill="both")
+
+        container_frame = tkinter.ttk.Frame(self)
+        container_frame.pack(side="top", fill="both")
+
+        paned_window = tkinter.ttk.PanedWindow(container_frame)
+        paned_window.grid(row=0, column=0, pady=(25, 5), sticky="nsew", rowspan=2)
+
+        paned_frame = tkinter.ttk.Frame(paned_window)
+        paned_window.add(paned_frame, weight=1)
+
+        changes_notebook = tkinter.ttk.Notebook(paned_frame)
+
+        patients_with_changes = tkinter.ttk.Frame(changes_notebook)
+        changes_notebook.add(patients_with_changes, text="Patients with Changes")
+
+        patients_with_prn_medications = tkinter.ttk.Frame(changes_notebook)
+        changes_notebook.add(patients_with_prn_medications, text="Patients with PRN Medications")
+
+        self.patients_with_changes_tree = Treeview(patients_with_changes,
+                                                   columns=('Date of Birth',
+                                                            'No. of Changes'),
+                                                   height=10)
+
+        self.patients_with_changes_tree.heading('#0', text="Patient Name")
+        self.patients_with_changes_tree.heading('Date of Birth', text="Date of Birth")
+        self.patients_with_changes_tree.heading('No. of Changes', text="No. of Changes")
+        self.patients_with_changes_tree.bind('<Double-1>',
+                                             lambda e: self.on_treeview_double_click
+                                             (self.patients_with_changes_tree,
+                                              self.master.collected_patients.pillpack_patient_dict)
+                                             )
+        self.patients_with_changes_tree.grid(row=0, column=0, sticky="ew")
+
+        self.patients_with_prns_tree = Treeview(patients_with_prn_medications,
+                                                columns=('Date of Birth',
+                                                         'No. of PRN Medications'),
+                                                height=10)
+
+        self.patients_with_prns_tree.heading('#0', text="Patient Name")
+        self.patients_with_prns_tree.heading('Date of Birth', text="Date of Birth")
+        self.patients_with_prns_tree.heading('No. of PRN Medications', text="No. of PRN Medications")
+        self.patients_with_prns_tree.bind('<Double-1>',
+                                          lambda e: self.on_treeview_double_click
+                                          (self.patients_with_changes_tree,
+                                           self.master.collected_patients.pillpack_patient_dict)
+                                          )
+        self.patients_with_prns_tree.grid(row=0, column=0, sticky="ew")
+        changes_notebook.pack(expand=True, fill="both", padx=5, pady=5)
+
+    def on_treeview_double_click(self, tree_to_select_from: Treeview, dictionary_to_lookup: dict):
+        if isinstance(tree_to_select_from, Treeview):
+            try:
+                item = tree_to_select_from.selection()[0]
+                split_patient_name = tree_to_select_from.item(item, "text").split(" ")
+                patient_list = dictionary_to_lookup.get(split_patient_name[1])
+                if isinstance(patient_list, list):
+                    filtered_patients = (list
+                                         (filter
+                                          (lambda patient: patient.first_name == split_patient_name[0],
+                                           patient_list)
+                                          )
+                                         )
+                    selected_patient = filtered_patients[0]
+                    self.master.show_frame(consts.VIEW_PATIENT_SCREEN, selected_patient)
+            except IndexError as e:
+                print("IndexError: ", e)
 
 
 class ScanScripts(Toplevel):
-    def __init__(self, parent: HomeScreen, master: App):
+    def __init__(self, parent, master: App):
         super().__init__(parent)
         warning_image_path = icons_dir + "\\warning.png"
         warning_image = PhotoImage(file=warning_image_path)
@@ -458,7 +693,7 @@ class ScanScripts(Toplevel):
         self.minor_mismatched_patients = None
         self.severe_mismatched_patients = None
         self.main_application: App = master
-        self.home_screen: HomeScreen = parent
+        self.parent = parent
         self.geometry("400x300")
         self.label = Label(self, text="Scan scripts below: ")
         self.label.pack(padx=20, pady=20)
@@ -524,14 +759,7 @@ class ScanScripts(Toplevel):
             self.patient_tree.set('severe_mismatches', 'No. of Patients',
                                   len(application.collected_patients.severe_mismatch_patients))
             self.__iterate_patients(application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
-        self.home_screen.refresh_treeview(self.home_screen.production_patients_tree,
-                                          self.main_application.collected_patients.pillpack_patient_dict)
-        self.home_screen.refresh_treeview(self.home_screen.perfect_patients_tree,
-                                          self.main_application.collected_patients.matched_patients)
-        self.home_screen.refresh_treeview(self.home_screen.imperfect_patients_tree,
-                                          self.main_application.collected_patients.minor_mismatch_patients)
-        self.home_screen.refresh_treeview(self.home_screen.mismatched_patients_tree,
-                                          self.main_application.collected_patients.severe_mismatch_patients)
+        self.main_application.app_observer.update_all()
         self.entry.delete(0, tkinter.END)
         self.entry.focus()
 
@@ -581,8 +809,8 @@ class ScanScripts(Toplevel):
                 for patient in list_of_patients:
                     if isinstance(patient, pillpackData.PillpackPatient):
                         if patient.first_name == first_name:
-                            self.main_application.show_frame(patient)
-                            self.home_screen.focus()
+                            self.main_application.show_frame(consts.VIEW_PATIENT_SCREEN, patient)
+                            self.parent.focus()
 
 
 def load_patients_from_object(application: App):
