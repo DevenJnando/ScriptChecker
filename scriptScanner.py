@@ -18,6 +18,7 @@ consts.TAKE_ACTIONS_DICTIONARY_FILE = 'actions.pk1'
 
 class CollectedPatients:
     def __init__(self):
+        self.ready_to_produce_code = 0
         self.pillpack_patient_dict = {}
         self.all_patients = {}
         self.matched_patients = {}
@@ -293,74 +294,10 @@ def scan_script_and_check_medications(collected_patients: CollectedPatients, sca
         print("Failed to read patient data from script...")
 
 
-#def view_patients():
-#    print("Pillpack production patients: ", collected_patients.pillpack_patient_dict)
-#    print("All patients: ", collected_patients.all_patients)
-#    print("Perfect matches: ", collected_patients.matched_patients)
-#    for patient_list in collected_patients.matched_patients.values():
-#        if isinstance(patient_list, list):
-#            for patient in patient_list:
-#                if isinstance(patient, PillpackPatient):
-#                    print("Patient name: ", patient.first_name, " ", patient.last_name)
-#                    print("Patient DoB: ", patient.date_of_birth)
-#                    print("Pillpack medications: ", patient.medication_dict)
-#                    for medication in patient.medication_dict.values():
-#                        print("Medication Name: ", medication.medication_name)
-#                        print("Dosage: ", medication.dosage)
-#                    print("Matched medications: ", patient.matched_medications_dict)
- #                   for medication in patient.matched_medications_dict.values():
-#                        print("Medication Name: ", medication.medication_name)
-#                        print("Dosage: ", medication.dosage)
-#                    print("Matched medications with incorrect dosages: ", patient.incorrect_dosages_dict)
-#                    for medication in patient.incorrect_dosages_dict.values():
-#                        print("Medication Name: ", medication.medication_name)
-#                        print("Dosage: ", medication.dosage)
-#                    print("Missing medications: ", patient.missing_medications_dict)
-#                    for medication in patient.missing_medications_dict.values():
-#                        print("Medication Name: ", medication.medication_name)
-#                        print("Dosage: ", medication.dosage)
- #                   print("Unknown medications: ", patient.unknown_medications_dict)
- #                   for medication in patient.unknown_medications_dict.values():
- #                       print("Medication Name: ", medication.medication_name)
- #                       print("Dosage: ", medication.dosage)
-#    print("Imperfect matches: ", collected_patients.minor_mismatch_patients)
-#    print("No pillpack data found: ", collected_patients.severe_mismatch_patients)
-
-
 def save_to_file(object_to_save, filename):
     with open(filename, 'wb') as output:
         pickle.dump(object_to_save, output, consts.PROTOCOL)
         print("Saved!")
-
-
-#def show_menu():
-#    print("""CLI menu:
-#        1. Load pill-pack production history
-#        2. Scan a script and check medications
-#        3. View collected results
-#        4. Save results
-#        5. Terminate Script
-#    """)
-#    print("Select your option below:")
-#    user_input = input()
-#    match user_input:
-#        case "1":
-#            collected_patients.set_pillpack_patient_dict(load_pillpack_data())
-#            show_menu()
-#        case "2":
-#            scan_script_and_check_medications()
-#            show_menu()
-#        case "3":
-#            view_patients()
-#            show_menu()
-#        case "4":
-#            save_to_file(collected_patients, "patients.pk1")
-#            show_menu()
-#        case "5":
-#            exit(0)
-#        case _:
-#            print("invalid option...")
-#            show_menu()
 
 
 def load_collected_patients_from_object():
