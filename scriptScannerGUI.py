@@ -394,38 +394,6 @@ class HomeScreen(Frame):
         else:
             self.open_scan_scripts_window()
 
-    def update(self):
-        self.refresh_treeview(self.production_patients_tree,
-                              self.master.collected_patients.pillpack_patient_dict),
-
-        self.refresh_treeview(self.perfect_patients_tree,
-                              self.master.collected_patients.matched_patients),
-
-        self.refresh_treeview(self.imperfect_patients_tree,
-                              self.master.collected_patients.minor_mismatch_patients),
-
-        self.refresh_treeview(self.mismatched_patients_tree,
-                              self.master.collected_patients.severe_mismatch_patients)
-
-    def check_if_pillpack_data_is_loaded(self):
-        if len(self.master.collected_patients.pillpack_patient_dict) == 0:
-            warning = Toplevel(master=self.master)
-            warning.geometry("400x200")
-            warning_label = Label(warning, text="You have not loaded any pillpack production data! "
-                                                "It is highly recommended that you do this before "
-                                                "scanning in scripts.",
-                                  wraplength=200)
-            warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
-            go_back_button = Button(warning, text="Go back", command=warning.destroy)
-            go_back_button.grid(row=1, column=0, padx=50, sticky="ew")
-            continue_button = Button(warning, text="Continue anyway",
-                                     command=lambda: [warning.destroy(),
-                                                      self.open_scan_scripts_window()
-                                                      ])
-            continue_button.grid(row=1, column=1, padx=50, sticky="ew")
-        else:
-            self.open_scan_scripts_window()
-
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
             self.script_window = ScanScripts(self, self.master)  # create window if its None or destroyed
@@ -540,7 +508,7 @@ class PatientMedicationDetails(Frame):
             off_button_image = PhotoImage(file=off_button_path)
             self.change_toggle_button_image = off_button_image.subsample(10, 10)
             self.changes_toggle_button.config(image=self.change_toggle_button_image)
-
+            
         match self.patient_object.ready_to_produce_code:
             case consts.READY_TO_PRODUCE_CODE:
                 ready_to_produce_path = icons_dir + "\\check.png"
