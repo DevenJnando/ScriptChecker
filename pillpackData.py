@@ -1,6 +1,7 @@
 import datetime
 import os
 import re
+import types
 import typing
 import xml.parsers.expat
 from functools import reduce
@@ -11,6 +12,11 @@ from zipfile import ZipFile
 
 import yaml
 
+consts = types.SimpleNamespace()
+consts.READY_TO_PRODUCE_CODE = 0
+consts.NOTHING_TO_COMPARE = 1
+consts.MISSING_MEDICATIONS = 2
+consts.DO_NOT_PRODUCE = 3
 
 class Medication:
     def __init__(self, medication_name: str, dosage: float):
@@ -34,11 +40,36 @@ class PillpackPatient:
         self.first_name: str = first_name
         self.last_name: str = last_name
         self.date_of_birth: datetime.date = date_of_birth
+        self.do_not_produce_flag: bool = False
+        self.ready_to_produce_code: int = 0
         self.medication_dict: dict = {}
         self.matched_medications_dict: dict = {}
         self.missing_medications_dict: dict = {}
         self.unknown_medications_dict: dict = {}
         self.incorrect_dosages_dict: dict = {}
+        self.prn_medications_dict: dict = {}
+
+    def do_not_produce(self, do_not_produce: bool):
+        self.do_not_produce_flag = do_not_produce
+
+    def set_ready_to_produce_code(self, ready_to_produce_code: int):
+        if 3 > ready_to_produce_code > 0:
+            self.ready_to_produce_code = ready_to_produce_code
+
+    def determine_ready_to_produce_code(self):
+        if not self.do_not_produce_flag:
+            if len(self.unknown_medications_dict) > 0:
+                self.ready_to_produce_code = consts.DO_NOT_PRODUCE
+            elif len(self.incorrect_dosages_dict) > 0:
+                self.ready_to_produce_code = consts.DO_NOT_PRODUCE
+            elif len(self.missing_medications_dict) > 0:
+                self.ready_to_produce_code = consts.MISSING_MEDICATIONS
+            elif len(self.matched_medications_dict) == len(self.medication_dict):
+                self.ready_to_produce_code = consts.READY_TO_PRODUCE_CODE
+            else:
+                self.ready_to_produce_code = consts.NOTHING_TO_COMPARE
+        else:
+            self.ready_to_produce_code = consts.DO_NOT_PRODUCE
 
     @staticmethod
     def __add_to_dict_of_medications(medication_to_add: Medication, dict_to_add_to: dict):
@@ -74,11 +105,17 @@ class PillpackPatient:
     def remove_unknown_medication_from_dict(self, med_to_be_removed: Medication):
         self.__remove_from_dict_of_medications(med_to_be_removed, self.unknown_medications_dict)
 
-    def add_incorrect_dosage_medication_to_dict(self, med_to_be_added):
+    def add_incorrect_dosage_medication_to_dict(self, med_to_be_added: Medication):
         self.__add_to_dict_of_medications(med_to_be_added, self.incorrect_dosages_dict)
 
     def remove_incorrect_dosage_medication_from_dict(self, med_to_be_removed: Medication):
         self.__remove_from_dict_of_medications(med_to_be_removed, self.incorrect_dosages_dict)
+
+    def add_prn_medication_to_dict(self, med_to_be_added: Medication):
+        self.__add_to_dict_of_medications(med_to_be_added, self.prn_medications_dict)
+
+    def remove_prn_medication_from_dict(self, med_to_be_removed: Medication):
+        self.__remove_from_dict_of_medications(med_to_be_removed, self.prn_medications_dict)
 
     def __hash__(self):
         return hash((self.first_name, self.last_name, self.date_of_birth))
@@ -248,5 +285,3 @@ def archive_pillpack_production(archive_file_name: str):
             for file in ppc_processed_files:
                 archived_production_data.write(pillpack_directory + file.name)
                 os.remove(pillpack_directory + file.name)
-
-# __sanitise_and_encode_text_from_file("2024-02-09-761.ppc_processed")

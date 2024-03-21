@@ -18,6 +18,7 @@ consts.TAKE_ACTIONS_DICTIONARY_FILE = 'actions.pk1'
 
 class CollectedPatients:
     def __init__(self):
+        self.ready_to_produce_code = 0
         self.pillpack_patient_dict = {}
         self.all_patients = {}
         self.matched_patients = {}
@@ -67,71 +68,6 @@ class CollectedPatients:
                 if patient.__eq__(patient_to_be_updated):
                     patients_with_last_name[i] = patient_to_be_updated
                     self.pillpack_patient_dict[patient_to_be_updated.last_name] = patients_with_last_name
-
-
-class TakeActionDicts:
-    def __init__(self):
-        self.changes = {}
-        self.prn_medications = {}
-        self.ignore = {}
-
-    @staticmethod
-    def __wrap_and_add_to_dict(patient_to_add: PillpackPatient, wrapper: dict, dict_to_add_to: dict):
-        if dict_to_add_to.__contains__(patient_to_add):
-            wrapper_list: list = dict_to_add_to.get(patient_to_add)
-            wrapper_list.append(wrapper)
-            dict_to_add_to[patient_to_add] = wrapper_list
-        else:
-            wrapper_list: list = [wrapper]
-            dict_to_add_to[patient_to_add] = wrapper_list
-
-    @staticmethod
-    def __unwrap_and_remove_from_dict(patient_to_remove_from: PillpackPatient, medication_to_remove: Medication,
-                                      dict_to_remove_from: dict):
-        if dict_to_remove_from.__contains__(patient_to_remove_from):
-            wrapper_list: list = dict_to_remove_from.get(patient_to_remove_from)
-            for wrapper in wrapper_list:
-                if isinstance(wrapper, dict):
-                    unwrapped_medication_object = wrapper["MedicationObject"]
-                    if isinstance(unwrapped_medication_object, Medication):
-                        if unwrapped_medication_object.__eq__(medication_to_remove):
-                            wrapper_list.remove(wrapper)
-            if len(wrapper_list) == 0:
-                dict_to_remove_from.pop(patient_to_remove_from)
-
-    @staticmethod
-    def __construct_wrapper(medication: Medication, notes: str):
-        return {
-            "MedicationObject": medication,
-            "Notes": notes
-        }
-
-    def add_medication_to_changes_dict(self, patient_to_add: PillpackPatient, medication_to_change: Medication,
-                                       notes: str = ""):
-        medication_wrapper = self.__construct_wrapper(medication_to_change, notes)
-        self.__wrap_and_add_to_dict(patient_to_add, medication_wrapper, self.changes)
-
-    def remove_medication_from_changes_dict(self, patient_to_remove_from: PillpackPatient,
-                                            medication_to_remove: Medication):
-        self.__unwrap_and_remove_from_dict(patient_to_remove_from, medication_to_remove, self.changes)
-
-    def add_medication_to_prn_medications_dict(self, patient_to_add: PillpackPatient, prn_medication: Medication,
-                                               notes: str = ""):
-        prn_wrapper = self.__construct_wrapper(prn_medication, notes)
-        self.__wrap_and_add_to_dict(patient_to_add, prn_wrapper, self.prn_medications)
-
-    def remove_medication_from_prn_medications_dict(self, patient_to_remove_from: PillpackPatient,
-                                                    medication_to_remove: Medication):
-        self.__unwrap_and_remove_from_dict(patient_to_remove_from, medication_to_remove, self.prn_medications)
-
-    def add_medication_to_ignore_dict(self, patient_to_add: PillpackPatient, medication_to_ignore: Medication,
-                                      notes: str = ""):
-        ignore_wrapper = self.__construct_wrapper(medication_to_ignore, notes)
-        self.__wrap_and_add_to_dict(patient_to_add, ignore_wrapper, self.ignore)
-
-    def remove_medication_from_ignore_dict(self, patient_to_remove_from: PillpackPatient,
-                                           medication_to_remove: Medication):
-        self.__unwrap_and_remove_from_dict(patient_to_remove_from, medication_to_remove, self.ignore)
 
 
 def scan_script(raw_xml_text: str):
@@ -293,74 +229,10 @@ def scan_script_and_check_medications(collected_patients: CollectedPatients, sca
         print("Failed to read patient data from script...")
 
 
-#def view_patients():
-#    print("Pillpack production patients: ", collected_patients.pillpack_patient_dict)
-#    print("All patients: ", collected_patients.all_patients)
-#    print("Perfect matches: ", collected_patients.matched_patients)
-#    for patient_list in collected_patients.matched_patients.values():
-#        if isinstance(patient_list, list):
-#            for patient in patient_list:
-#                if isinstance(patient, PillpackPatient):
-#                    print("Patient name: ", patient.first_name, " ", patient.last_name)
-#                    print("Patient DoB: ", patient.date_of_birth)
-#                    print("Pillpack medications: ", patient.medication_dict)
-#                    for medication in patient.medication_dict.values():
-#                        print("Medication Name: ", medication.medication_name)
-#                        print("Dosage: ", medication.dosage)
-#                    print("Matched medications: ", patient.matched_medications_dict)
- #                   for medication in patient.matched_medications_dict.values():
-#                        print("Medication Name: ", medication.medication_name)
-#                        print("Dosage: ", medication.dosage)
-#                    print("Matched medications with incorrect dosages: ", patient.incorrect_dosages_dict)
-#                    for medication in patient.incorrect_dosages_dict.values():
-#                        print("Medication Name: ", medication.medication_name)
-#                        print("Dosage: ", medication.dosage)
-#                    print("Missing medications: ", patient.missing_medications_dict)
-#                    for medication in patient.missing_medications_dict.values():
-#                        print("Medication Name: ", medication.medication_name)
-#                        print("Dosage: ", medication.dosage)
- #                   print("Unknown medications: ", patient.unknown_medications_dict)
- #                   for medication in patient.unknown_medications_dict.values():
- #                       print("Medication Name: ", medication.medication_name)
- #                       print("Dosage: ", medication.dosage)
-#    print("Imperfect matches: ", collected_patients.minor_mismatch_patients)
-#    print("No pillpack data found: ", collected_patients.severe_mismatch_patients)
-
-
 def save_to_file(object_to_save, filename):
     with open(filename, 'wb') as output:
         pickle.dump(object_to_save, output, consts.PROTOCOL)
         print("Saved!")
-
-
-#def show_menu():
-#    print("""CLI menu:
-#        1. Load pill-pack production history
-#        2. Scan a script and check medications
-#        3. View collected results
-#        4. Save results
-#        5. Terminate Script
-#    """)
-#    print("Select your option below:")
-#    user_input = input()
-#    match user_input:
-#        case "1":
-#            collected_patients.set_pillpack_patient_dict(load_pillpack_data())
-#            show_menu()
-#        case "2":
-#            scan_script_and_check_medications()
-#            show_menu()
-#        case "3":
-#            view_patients()
-#            show_menu()
-#        case "4":
-#            save_to_file(collected_patients, "patients.pk1")
-#            show_menu()
-#        case "5":
-#            exit(0)
-#        case _:
-#            print("invalid option...")
-#            show_menu()
 
 
 def load_collected_patients_from_object():
@@ -372,14 +244,3 @@ def load_collected_patients_from_object():
         collected_patients = CollectedPatients()
     finally:
         return collected_patients
-
-
-def load_action_required_dicts_from_object():
-    actions_to_take: TakeActionDicts = TakeActionDicts()
-    try:
-        with open(consts.TAKE_ACTIONS_DICTIONARY_FILE, 'rb') as inpt:
-            actions_to_take = pickle.load(inpt)
-    except FileNotFoundError:
-        actions_to_take = TakeActionDicts()
-    finally:
-        return actions_to_take
