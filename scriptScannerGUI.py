@@ -84,7 +84,6 @@ class App(tkinter.Tk):
         self.geometry("1080x720")
         self.title("Pillpack Script Checker")
         self.collected_patients = scriptScanner.CollectedPatients()
-        self.actions_to_take = scriptScanner.TakeActionDicts()
         self.app_observer: Observer = Observer()
         self.total_medications = 0
         self.title_font = font.Font(family='Verdana', size=28, weight="bold")

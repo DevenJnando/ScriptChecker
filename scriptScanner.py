@@ -70,71 +70,6 @@ class CollectedPatients:
                     self.pillpack_patient_dict[patient_to_be_updated.last_name] = patients_with_last_name
 
 
-class TakeActionDicts:
-    def __init__(self):
-        self.changes = {}
-        self.prn_medications = {}
-        self.ignore = {}
-
-    @staticmethod
-    def __wrap_and_add_to_dict(patient_to_add: PillpackPatient, wrapper: dict, dict_to_add_to: dict):
-        if dict_to_add_to.__contains__(patient_to_add):
-            wrapper_list: list = dict_to_add_to.get(patient_to_add)
-            wrapper_list.append(wrapper)
-            dict_to_add_to[patient_to_add] = wrapper_list
-        else:
-            wrapper_list: list = [wrapper]
-            dict_to_add_to[patient_to_add] = wrapper_list
-
-    @staticmethod
-    def __unwrap_and_remove_from_dict(patient_to_remove_from: PillpackPatient, medication_to_remove: Medication,
-                                      dict_to_remove_from: dict):
-        if dict_to_remove_from.__contains__(patient_to_remove_from):
-            wrapper_list: list = dict_to_remove_from.get(patient_to_remove_from)
-            for wrapper in wrapper_list:
-                if isinstance(wrapper, dict):
-                    unwrapped_medication_object = wrapper["MedicationObject"]
-                    if isinstance(unwrapped_medication_object, Medication):
-                        if unwrapped_medication_object.__eq__(medication_to_remove):
-                            wrapper_list.remove(wrapper)
-            if len(wrapper_list) == 0:
-                dict_to_remove_from.pop(patient_to_remove_from)
-
-    @staticmethod
-    def __construct_wrapper(medication: Medication, notes: str):
-        return {
-            "MedicationObject": medication,
-            "Notes": notes
-        }
-
-    def add_medication_to_changes_dict(self, patient_to_add: PillpackPatient, medication_to_change: Medication,
-                                       notes: str = ""):
-        medication_wrapper = self.__construct_wrapper(medication_to_change, notes)
-        self.__wrap_and_add_to_dict(patient_to_add, medication_wrapper, self.changes)
-
-    def remove_medication_from_changes_dict(self, patient_to_remove_from: PillpackPatient,
-                                            medication_to_remove: Medication):
-        self.__unwrap_and_remove_from_dict(patient_to_remove_from, medication_to_remove, self.changes)
-
-    def add_medication_to_prn_medications_dict(self, patient_to_add: PillpackPatient, prn_medication: Medication,
-                                               notes: str = ""):
-        prn_wrapper = self.__construct_wrapper(prn_medication, notes)
-        self.__wrap_and_add_to_dict(patient_to_add, prn_wrapper, self.prn_medications)
-
-    def remove_medication_from_prn_medications_dict(self, patient_to_remove_from: PillpackPatient,
-                                                    medication_to_remove: Medication):
-        self.__unwrap_and_remove_from_dict(patient_to_remove_from, medication_to_remove, self.prn_medications)
-
-    def add_medication_to_ignore_dict(self, patient_to_add: PillpackPatient, medication_to_ignore: Medication,
-                                      notes: str = ""):
-        ignore_wrapper = self.__construct_wrapper(medication_to_ignore, notes)
-        self.__wrap_and_add_to_dict(patient_to_add, ignore_wrapper, self.ignore)
-
-    def remove_medication_from_ignore_dict(self, patient_to_remove_from: PillpackPatient,
-                                           medication_to_remove: Medication):
-        self.__unwrap_and_remove_from_dict(patient_to_remove_from, medication_to_remove, self.ignore)
-
-
 def scan_script(raw_xml_text: str):
     try:
         sanitised_xml_text = raw_xml_text.replace('@', '"').replace('&£39;', "'")
@@ -309,14 +244,3 @@ def load_collected_patients_from_object():
         collected_patients = CollectedPatients()
     finally:
         return collected_patients
-
-
-def load_action_required_dicts_from_object():
-    actions_to_take: TakeActionDicts = TakeActionDicts()
-    try:
-        with open(consts.TAKE_ACTIONS_DICTIONARY_FILE, 'rb') as inpt:
-            actions_to_take = pickle.load(inpt)
-    except FileNotFoundError:
-        actions_to_take = TakeActionDicts()
-    finally:
-        return actions_to_take
