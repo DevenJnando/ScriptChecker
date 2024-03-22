@@ -13,10 +13,15 @@ import scriptScanner
 consts = types.SimpleNamespace()
 consts.HOME_SCREEN = "HomeScreen"
 consts.VIEW_PATIENT_SCREEN = "ViewPatientScreen"
+consts.SHOW_ALL_RESULTS_STRING = "All Patients"
+consts.READY_TO_PRODUCE_STRING = "Ready to produce"
 consts.READY_TO_PRODUCE_CODE = 0
-consts.NOTHING_TO_COMPARE = 1
-consts.MISSING_MEDICATIONS = 2
-consts.DO_NOT_PRODUCE = 3
+consts.NOTHING_TO_COMPARE_STRING = "Nothing to compare"
+consts.NOTHING_TO_COMPARE_CODE = 1
+consts.MISSING_MEDICATIONS_STRING = "Missing Medications"
+consts.MISSING_MEDICATIONS_CODE = 2
+consts.DO_NOT_PRODUCE_STRING = "Do not produce"
+consts.DO_NOT_PRODUCE_CODE = 3
 
 script_dir = sys.path[0]
 resources_dir = script_dir + "\\Resources"
@@ -240,7 +245,27 @@ class HomeScreen(Frame):
                                            (self.production_patients_tree,
                                             self.master.collected_patients.pillpack_patient_dict)
                                            )
-        self.production_patients_tree.grid(row=0, column=0, sticky="ew")
+        production_patients_filter_label = Label(production_patients_results, font=self.font, text="Filter results: ")
+        production_patients_filter_combobox = tkinter.ttk.Combobox(production_patients_results,
+                                                                   state="readonly",
+                                                                   font=self.font,
+                                                                   values=[consts.SHOW_ALL_RESULTS_STRING,
+                                                                           consts.READY_TO_PRODUCE_STRING,
+                                                                           consts.MISSING_MEDICATIONS_STRING,
+                                                                           consts.DO_NOT_PRODUCE_STRING,
+                                                                           consts.NOTHING_TO_COMPARE_STRING
+                                                                           ]
+                                                                   )
+        production_patients_filter_combobox.bind("<<ComboboxSelected>>",
+                                                 lambda e:
+                                                 self._on_filter_selected(
+                                                     production_patients_filter_combobox.get(),
+                                                     self.production_patients_tree,
+                                                     self.master.collected_patients.pillpack_patient_dict)
+                                                 )
+        production_patients_filter_label.grid(row=0, column=0)
+        production_patients_filter_combobox.grid(row=1, column=0)
+        self.production_patients_tree.grid(row=2, column=0, sticky="ew")
 
         perfect_match_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(perfect_match_patients, text="Perfectly Matched Patients")
@@ -261,7 +286,27 @@ class HomeScreen(Frame):
                                         (self.perfect_patients_tree,
                                          self.master.collected_patients.matched_patients)
                                         )
-        self.perfect_patients_tree.grid(row=0, column=0, sticky="ew")
+        perfect_patients_filter_label = Label(perfect_match_patients, font=self.font, text="Filter results: ")
+        perfect_patients_filter_combobox = tkinter.ttk.Combobox(perfect_match_patients,
+                                                                state="readonly",
+                                                                font=self.font,
+                                                                values=[consts.SHOW_ALL_RESULTS_STRING,
+                                                                        consts.READY_TO_PRODUCE_STRING,
+                                                                        consts.MISSING_MEDICATIONS_STRING,
+                                                                        consts.DO_NOT_PRODUCE_STRING,
+                                                                        consts.NOTHING_TO_COMPARE_STRING
+                                                                        ]
+                                                                )
+        perfect_patients_filter_combobox.bind("<<ComboboxSelected>>",
+                                              lambda e:
+                                              self._on_filter_selected(
+                                                  perfect_patients_filter_combobox.get(),
+                                                  self.perfect_patients_tree,
+                                                  self.master.collected_patients.matched_patients)
+                                              )
+        perfect_patients_filter_label.grid(row=0, column=0)
+        perfect_patients_filter_combobox.grid(row=1, column=0)
+        self.perfect_patients_tree.grid(row=2, column=0, sticky="ew")
 
         minor_mismatch_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(minor_mismatch_patients, text="Minor Mismatched Patients")
@@ -282,7 +327,27 @@ class HomeScreen(Frame):
                                           (self.imperfect_patients_tree,
                                            self.master.collected_patients.minor_mismatch_patients)
                                           )
-        self.imperfect_patients_tree.grid(row=0, column=0, sticky="ew")
+        imperfect_patients_filter_label = Label(minor_mismatch_patients, font=self.font, text="Filter results: ")
+        imperfect_patients_filter_combobox = tkinter.ttk.Combobox(minor_mismatch_patients,
+                                                                  state="readonly",
+                                                                  font=self.font,
+                                                                  values=[consts.SHOW_ALL_RESULTS_STRING,
+                                                                          consts.READY_TO_PRODUCE_STRING,
+                                                                          consts.MISSING_MEDICATIONS_STRING,
+                                                                          consts.DO_NOT_PRODUCE_STRING,
+                                                                          consts.NOTHING_TO_COMPARE_STRING
+                                                                          ]
+                                                                  )
+        imperfect_patients_filter_combobox.bind("<<ComboboxSelected>>",
+                                                lambda e:
+                                                self._on_filter_selected(
+                                                    imperfect_patients_filter_combobox.get(),
+                                                    self.imperfect_patients_tree,
+                                                    self.master.collected_patients.minor_mismatch_patients)
+                                                )
+        imperfect_patients_filter_label.grid(row=0, column=0)
+        imperfect_patients_filter_combobox.grid(row=1, column=0)
+        self.imperfect_patients_tree.grid(row=2, column=0, sticky="ew")
 
         severe_mismatch_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(severe_mismatch_patients, text="Severely Mismatched Patients")
@@ -303,21 +368,41 @@ class HomeScreen(Frame):
                                            (self.mismatched_patients_tree,
                                             self.master.collected_patients.severe_mismatch_patients)
                                            )
-        self.mismatched_patients_tree.grid(row=0, column=0, sticky="ew")
+        mismatched_patients_filter_label = Label(severe_mismatch_patients, font=self.font, text="Filter results: ")
+        mismatched_patients_filter_combobox = tkinter.ttk.Combobox(severe_mismatch_patients,
+                                                                   state="readonly",
+                                                                   font=self.font,
+                                                                   values=[consts.SHOW_ALL_RESULTS_STRING,
+                                                                           consts.READY_TO_PRODUCE_STRING,
+                                                                           consts.MISSING_MEDICATIONS_STRING,
+                                                                           consts.DO_NOT_PRODUCE_STRING,
+                                                                           consts.NOTHING_TO_COMPARE_STRING
+                                                                           ]
+                                                                   )
+        mismatched_patients_filter_combobox.bind("<<ComboboxSelected>>",
+                                                 lambda e:
+                                                 self._on_filter_selected(
+                                                     mismatched_patients_filter_combobox.get(),
+                                                     self.mismatched_patients_tree,
+                                                     self.master.collected_patients.severe_mismatch_patients)
+                                                 )
+        mismatched_patients_filter_label.grid(row=0, column=0)
+        mismatched_patients_filter_combobox.grid(row=1, column=0)
+        self.mismatched_patients_tree.grid(row=2, column=0, sticky="ew")
 
         results_notebook.pack(expand=True, fill="both", padx=5, pady=5)
 
         self.update()
         self.script_window = None
 
-    def refresh_patient_status(self):
+    def _refresh_patient_status(self):
         for patient_list in self.master.collected_patients.pillpack_patient_dict.values():
             if isinstance(patient_list, list):
                 for patient in patient_list:
                     if isinstance(patient, scriptScanner.PillpackPatient):
                         patient.determine_ready_to_produce_code()
 
-    def refresh_treeview(self, tree_to_refresh: tkinter.ttk.Treeview, dictionary: dict):
+    def _refresh_treeview(self, tree_to_refresh: tkinter.ttk.Treeview, dictionary: dict):
         iterator = dictionary.values()
         for patient_list in iterator:
             if isinstance(patient_list, list):
@@ -361,18 +446,40 @@ class HomeScreen(Frame):
                                 tree_to_refresh.set(key, 'Condition', "No scripts yet scanned")
                                 tree_to_refresh.item(key, image=self.no_scripts_scanned_image)
 
+    def _filter_treeview(self, tree_to_filter: Treeview, dictionary_to_reference: dict, search_code: int = None):
+        if search_code is not None:
+            iterator = dictionary_to_reference.values()
+            for patient_list in iterator:
+                if isinstance(patient_list, list):
+                    for patient in patient_list:
+                        if isinstance(patient, scriptScanner.PillpackPatient):
+                            pillpack_patients: list = self.master.collected_patients.pillpack_patient_dict.get(
+                                patient.last_name)
+                            pillpack_patients = list(
+                                filter
+                                (lambda entity:
+                                 typing.cast(scriptScanner.PillpackPatient, entity).first_name == patient.first_name,
+                                 pillpack_patients)
+                            )
+                            matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0]
+                            key = patient.first_name + " " + patient.last_name
+                            if (tree_to_filter.exists(key)
+                                    and matching_pillpack_patient.ready_to_produce_code != search_code):
+                                tree_to_filter.delete(key)
+        else:
+            self._refresh_treeview(tree_to_filter, dictionary_to_reference)
+
     def update(self):
-        self.refresh_patient_status()
-        self.refresh_treeview(self.production_patients_tree,
-                              self.master.collected_patients.pillpack_patient_dict),
+        self._refresh_patient_status()
+        self._refresh_treeview(self.production_patients_tree,
+                              self.master.collected_patients.pillpack_patient_dict)
+        self._refresh_treeview(self.perfect_patients_tree,
+                              self.master.collected_patients.matched_patients)
 
-        self.refresh_treeview(self.perfect_patients_tree,
-                              self.master.collected_patients.matched_patients),
+        self._refresh_treeview(self.imperfect_patients_tree,
+                              self.master.collected_patients.minor_mismatch_patients)
 
-        self.refresh_treeview(self.imperfect_patients_tree,
-                              self.master.collected_patients.minor_mismatch_patients),
-
-        self.refresh_treeview(self.mismatched_patients_tree,
+        self._refresh_treeview(self.mismatched_patients_tree,
                               self.master.collected_patients.severe_mismatch_patients)
 
     def check_if_pillpack_data_is_loaded(self):
@@ -400,6 +507,23 @@ class HomeScreen(Frame):
             self.script_window.grab_set()
         else:
             self.script_window.focus()  # if window exists focus it
+
+    def _on_filter_selected(self, selected_filter: str, treeview_to_filter: Treeview, dictionary_to_reference: dict):
+        match selected_filter:
+            case consts.SHOW_ALL_RESULTS_STRING:
+                self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
+            case consts.NOTHING_TO_COMPARE_STRING:
+                self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
+                self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.NOTHING_TO_COMPARE_CODE)
+            case consts.MISSING_MEDICATIONS_STRING:
+                self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
+                self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.MISSING_MEDICATIONS_CODE)
+            case consts.DO_NOT_PRODUCE_STRING:
+                self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
+                self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.DO_NOT_PRODUCE_CODE)
+            case consts.READY_TO_PRODUCE_STRING:
+                self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
+                self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.READY_TO_PRODUCE_CODE)
 
     def on_treeview_double_click(self, tree_to_select_from: Treeview, dictionary_to_lookup: dict):
         if isinstance(tree_to_select_from, Treeview):
@@ -495,7 +619,10 @@ class PatientMedicationDetails(Frame):
 
     def _on_changes_button_click(self):
         self.patient_object.do_not_produce(not self.patient_object.do_not_produce_flag)
-        self.master.app_observer.update_all()
+        self.master.app_observer.update(self)
+
+    def _refresh_patient_status(self):
+        self.patient_object.determine_ready_to_produce_code()
 
     def check_if_patient_is_ready_for_production(self):
         if self.patient_object.do_not_produce_flag:
@@ -508,7 +635,7 @@ class PatientMedicationDetails(Frame):
             off_button_image = PhotoImage(file=off_button_path)
             self.change_toggle_button_image = off_button_image.subsample(10, 10)
             self.changes_toggle_button.config(image=self.change_toggle_button_image)
-            
+
         match self.patient_object.ready_to_produce_code:
             case consts.READY_TO_PRODUCE_CODE:
                 ready_to_produce_path = icons_dir + "\\check.png"
@@ -517,21 +644,21 @@ class PatientMedicationDetails(Frame):
                 ready_to_produce_label = Label(self.display_frame, font=self.font,
                                                image=self.ready_to_produce_image)
                 ready_to_produce_label.grid(row=0, column=1)
-            case consts.NOTHING_TO_COMPARE:
+            case consts.NOTHING_TO_COMPARE_CODE:
                 no_scripts_scanned_path = icons_dir + "\\question.png"
                 no_scripts_scanned_image = PhotoImage(file=no_scripts_scanned_path)
                 self.no_scripts_scanned_image = no_scripts_scanned_image.subsample(5, 5)
                 no_scripts_scanned_label = Label(self.display_frame, font=self.font,
                                                  image=self.no_scripts_scanned_image)
                 no_scripts_scanned_label.grid(row=0, column=1)
-            case consts.MISSING_MEDICATIONS:
+            case consts.MISSING_MEDICATIONS_CODE:
                 missing_scripts_path = icons_dir + "\\warning.png"
                 missing_scripts_image = PhotoImage(file=missing_scripts_path)
                 self.missing_scripts_image = missing_scripts_image.subsample(5, 5)
                 missing_scripts_label = Label(self.display_frame, font=self.font,
                                               image=self.missing_scripts_image)
                 missing_scripts_label.grid(row=0, column=1)
-            case consts.DO_NOT_PRODUCE:
+            case consts.DO_NOT_PRODUCE_CODE:
                 do_not_produce_path = icons_dir + "\\remove.png"
                 do_not_produce_image = PhotoImage(file=do_not_produce_path)
                 self.do_not_produce_image = do_not_produce_image.subsample(5, 5)
@@ -627,6 +754,7 @@ class PatientMedicationDetails(Frame):
             self.master.app_observer.update_all()
 
     def update(self):
+        self._refresh_patient_status()
         self.check_if_patient_is_ready_for_production()
         self.clear_label_frame(self.production_medication_frame)
         self.clear_label_frame(self.matched_medication_frame)
