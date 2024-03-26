@@ -231,10 +231,13 @@ class HomeScreen(Frame):
         results_notebook.add(production_patients_results, text="Patients in Pillpack Production")
 
         self.production_patients_tree = Treeview(production_patients_results,
-                                                 columns=('Date of Birth',
+                                                 columns=('First Name',
+                                                          'Last Name',
+                                                          'Date of Birth',
                                                           'No. of Medications',
                                                           'Condition'),
                                                  height=10)
+        self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
 
         self.production_patients_tree.heading('#0', text="Patient Name")
         self.production_patients_tree.heading('Date of Birth', text="Date of Birth")
@@ -271,7 +274,9 @@ class HomeScreen(Frame):
         results_notebook.add(perfect_match_patients, text="Perfectly Matched Patients")
 
         self.perfect_patients_tree = Treeview(perfect_match_patients,
-                                              columns=('Date of Birth',
+                                              columns=('First Name',
+                                                       'Last Name',
+                                                       'Date of Birth',
                                                        'No. of Medications',
                                                        'Condition'),
                                               height=10)
@@ -312,7 +317,9 @@ class HomeScreen(Frame):
         results_notebook.add(minor_mismatch_patients, text="Minor Mismatched Patients")
 
         self.imperfect_patients_tree = Treeview(minor_mismatch_patients,
-                                                columns=('Date of Birth',
+                                                columns=('First Name',
+                                                         'Last Name',
+                                                         'Date of Birth',
                                                          'No. of Medications',
                                                          'Condition'),
                                                 height=10)
@@ -353,7 +360,9 @@ class HomeScreen(Frame):
         results_notebook.add(severe_mismatch_patients, text="Severely Mismatched Patients")
 
         self.mismatched_patients_tree = Treeview(severe_mismatch_patients,
-                                                 columns=('Date of Birth',
+                                                 columns=('First Name',
+                                                          'Last Name',
+                                                          'Date of Birth',
                                                           'No. of Medications',
                                                           'Condition'),
                                                  height=10)
@@ -420,6 +429,8 @@ class HomeScreen(Frame):
                         key = patient.first_name + " " + patient.last_name
                         if not tree_to_refresh.exists(key):
                             tree_to_refresh.insert('', 'end', key, text=key)
+                            tree_to_refresh.set(key, 'First Name', patient.first_name)
+                            tree_to_refresh.set(key, 'Last Name', patient.last_name)
                         if matching_pillpack_patient.date_of_birth == datetime.date.today():
                             tree_to_refresh.set(key, 'Date of Birth', "Not provided...")
                         else:
@@ -528,13 +539,15 @@ class HomeScreen(Frame):
     def on_treeview_double_click(self, tree_to_select_from: Treeview, dictionary_to_lookup: dict):
         if isinstance(tree_to_select_from, Treeview):
             try:
-                item = tree_to_select_from.selection()[0]
-                split_patient_name = tree_to_select_from.item(item, "text").split(" ")
-                patient_list = dictionary_to_lookup.get(split_patient_name[1])
+                item = tree_to_select_from.focus()
+                column_values = tree_to_select_from.item(item).get("values")
+                first_name = column_values[0]
+                last_name = column_values[1]
+                patient_list = dictionary_to_lookup.get(last_name)
                 if isinstance(patient_list, list):
                     filtered_patients = (list
                                          (filter
-                                          (lambda patient: patient.first_name == split_patient_name[0],
+                                          (lambda patient: patient.first_name == first_name,
                                            patient_list)
                                           )
                                          )
