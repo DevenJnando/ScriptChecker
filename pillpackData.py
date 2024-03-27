@@ -261,11 +261,10 @@ def get_patient_medicine_data():
                 patient_object = __create_patient_object(order)
                 if isinstance(patient_object, PillpackPatient):
                     if dict_of_patients.__contains__(patient_object.last_name):
-                        print(patient_object.last_name)
                         list_of_patients: list = dict_of_patients.get(patient_object.last_name)
                         list_of_patients.append(patient_object)
                         list_of_patients = list(dict.fromkeys(list_of_patients))
-                        print(list_of_patients)
+                        dict_of_patients[patient_object.last_name] = list_of_patients
                     else:
                         list_of_patients: list = [patient_object]
                         dict_of_patients[patient_object.last_name] = list_of_patients
