@@ -72,7 +72,8 @@ class CollectedPatients:
 
 def scan_script(raw_xml_text: str):
     try:
-        sanitised_xml_text = raw_xml_text.replace('@', '"').replace('&£39;', "'")
+        sanitised_xml_text = raw_xml_text.replace('@', '"').replace('£', "#")
+        sanitised_xml_text.encode("iso-8859-1")
         document = minidom.parseString(sanitised_xml_text)
         return document
     except xml.parsers.expat.ExpatError as e:
