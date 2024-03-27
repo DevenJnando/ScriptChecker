@@ -425,7 +425,8 @@ class HomeScreen(Frame):
                              typing.cast(scriptScanner.PillpackPatient, entity).first_name == patient.first_name,
                              pillpack_patients)
                         )
-                        matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0]
+                        matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0] \
+                            if(len(pillpack_patients) > 0) else patient
                         key = patient.first_name + " " + patient.last_name
                         if not tree_to_refresh.exists(key):
                             tree_to_refresh.insert('', 'end', key, text=key)

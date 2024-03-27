@@ -136,11 +136,6 @@ config = __load_settings()
 patient_order_list: list
 
 
-def __return_ppc_processed_file(filename: str):
-    if filename.split(".")[1] == "ppc_processed":
-        return filename
-
-
 def __scan_pillpack_folder(filepath: str):
     entities = scandir(filepath)
     return list(filter(lambda entity: entity.is_file() and entity.name.split(".")[1] == "ppc_processed", entities))

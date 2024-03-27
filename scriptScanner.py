@@ -213,6 +213,11 @@ def check_if_patient_is_in_pillpack_production(pillpack_patient_dict: dict,
                 collected_patients.add_minor_mismatched_patient(patient)
         elif isinstance(matched_patient, list) and len(matched_patient) == 0:
             collected_patients.add_patient(script_patient, consts.NO_MATCH)
+            script_patient.do_not_produce(True)
+            script_patient.ready_to_produce_code = 3
+            for medication in list(script_patient.medication_dict.values()):
+                script_patient.add_unknown_medication_to_dict(medication)
+            script_patient.medication_dict.clear()
             collected_patients.add_severely_mismatched_patient(script_patient)
         else:
             print("You should not see this. Something has broken...tell James to fix his awful code!")
