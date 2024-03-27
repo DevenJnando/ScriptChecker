@@ -18,6 +18,7 @@ consts.NOTHING_TO_COMPARE = 1
 consts.MISSING_MEDICATIONS = 2
 consts.DO_NOT_PRODUCE = 3
 
+
 class Medication:
     def __init__(self, medication_name: str, dosage: float):
         self.medication_name: str = medication_name

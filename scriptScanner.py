@@ -123,15 +123,22 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
             pillpack_medication: Medication = full_medication_dict[medication]
             script_medication: Medication = script_medication_dict[substring_results[0]]
             if pillpack_medication.equals(script_medication):
-                patient_from_production.add_matched_medication_to_dict(script_medication)
-                clear_medication_warning_dicts(patient_from_production, script_medication)
+                patient_from_production.add_matched_medication_to_dict(pillpack_medication)
+                clear_medication_warning_dicts(patient_from_production, pillpack_medication)
             else:
                 patient_from_production.add_incorrect_dosage_medication_to_dict(script_medication)
         elif not patient_from_script.medication_dict.__contains__(medication):
-            patient_from_production.add_missing_medication_to_dict(full_medication_dict[medication])
+            if not patient_from_production.matched_medications_dict.__contains__(medication):
+                patient_from_production.add_missing_medication_to_dict(full_medication_dict[medication])
     for medication in script_medication_dict.keys():
-        if not full_medication_dict.__contains__(medication):
-            patient_from_production.add_unknown_medication_to_dict(script_medication_dict[medication])
+        substring_results = [key for key in full_medication_dict.keys() if key in medication]
+        if len(substring_results) > 0:
+            pillpack_medication: Medication = full_medication_dict[substring_results[0]]
+            if patient_from_production.matched_medications_dict.__contains__(pillpack_medication):
+                clear_medication_warning_dicts(patient_from_production, pillpack_medication)
+        else:
+            if not full_medication_dict.__contains__(medication):
+                patient_from_production.add_unknown_medication_to_dict(script_medication_dict[medication])
     collected_patients.update_pillpack_patient_dict(patient_from_production)
 
 
