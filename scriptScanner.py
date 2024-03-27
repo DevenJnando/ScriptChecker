@@ -13,7 +13,6 @@ consts.IMPERFECT_MATCH = "IMPERFECT_MATCH"
 consts.NO_MATCH = "NO_MATCH"
 consts.PROTOCOL = pickle.HIGHEST_PROTOCOL
 consts.COLLECTED_PATIENTS_FILE = 'patients.pk1'
-consts.TAKE_ACTIONS_DICTIONARY_FILE = 'actions.pk1'
 
 
 class CollectedPatients:
