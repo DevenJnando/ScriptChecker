@@ -624,6 +624,10 @@ class PatientMedicationDetails(Frame):
         self.incorrect_medication_dosage_frame.columnconfigure(0, weight=1)
         self.incorrect_medication_dosage_frame.columnconfigure(1, weight=2)
 
+        self.ignore_medications_frame = LabelFrame(self.display_frame)
+        self.ignore_medications_frame.columnconfigure(0, weight=1)
+        self.ignore_medications_frame.columnconfigure(1, weight=2)
+
         self.display_canvas.create_window((0, 0), window=self.display_frame, anchor="nw")
 
         self.update()
@@ -683,7 +687,9 @@ class PatientMedicationDetails(Frame):
     def populate_label_frame(self, label_frame_to_populate: LabelFrame, frame_title: str,
                              row_number: int, dictionary_to_iterate: dict,
                              include_prn_medications_button: bool = False,
-                             include_delete_prn_medications_button: bool = False
+                             include_delete_prn_medications_button: bool = False,
+                             include_ignore_medications_button: bool = False,
+                             include_remove_from_ignore_button: bool = False
                              ):
         dictionary_values: list = list(dictionary_to_iterate.values())
         if len(dictionary_values) > 0:
@@ -713,8 +719,25 @@ class PatientMedicationDetails(Frame):
                     delete_prn_medication_button = Button(label_frame_to_populate, text="Remove from PRN list",
                                                           command=lambda e=medication: self.remove_prn_medication(e))
                     delete_prn_medication_button.grid(row=i + 1, column=5)
+                if include_ignore_medications_button:
+                    ignore_medication_button = Button(label_frame_to_populate, text="Ignore",
+                                                      command=lambda e=medication:
+                                                      self.add_medication_to_ignore_dict(e,
+                                                                                         dictionary_to_iterate
+                                                                                         )
+                                                        )
+                    ignore_medication_button.grid(row=i + 1, column=7)
+                if include_remove_from_ignore_button:
+                    remove_from_ignore_button = Button(label_frame_to_populate, text="Remove from ignore list",
+                                                       command=lambda e=medication:
+                                                       self.remove_medication_from_ignore_dict(e))
+                    remove_from_ignore_button.grid(row=i + 1, column=9)
 
-    def populate_incorrect_dosages_label_frame(self, row_number: int, incorrect_medication_dosage_frame):
+    def populate_incorrect_dosages_label_frame(self,
+                                               incorrect_medication_dosage_frame,
+                                               row_number: int,
+                                               include_ignore_medications_button: bool = False
+                                               ):
         incorrect_dosages_values = list(self.patient_object.incorrect_dosages_dict.values())
         if len(incorrect_dosages_values) > 0:
             incorrect_medication_dosage_label = Label(self.display_frame,
@@ -746,6 +769,13 @@ class PatientMedicationDetails(Frame):
                     medication_name_label.grid(row=i + 1, column=0)
                     medication_dosage_in_production_label.grid(row=i + 1, column=1)
                     medication_dosage_on_script_label.grid(row=i + 1, column=2)
+                    if include_ignore_medications_button:
+                        ignore_medication_button = Button(self.incorrect_medication_dosage_frame, text="Ignore",
+                                                          command=lambda e=medication:
+                                                          self.add_medication_to_ignore_dict
+                                                          (e, self.patient_object.medication_dict)
+                                                          )
+                        ignore_medication_button.grid(row=i + 1, column=3)
 
     @staticmethod
     def clear_label_frame(frame_to_clear: LabelFrame):
@@ -756,16 +786,31 @@ class PatientMedicationDetails(Frame):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
         self.patient_object.add_prn_medication_to_dict(selected_medication)
-        self.master.app_observer.update_all()
+        self.master.app_observer.update(self)
 
     def remove_prn_medication(self, selected_medication: scriptScanner.Medication):
         if self.patient_object.prn_medications_dict.__contains__(selected_medication.medication_name):
-            self.patient_object.prn_medications_dict.pop(selected_medication.medication_name)
+            self.patient_object.remove_prn_medication_from_dict(selected_medication)
             if self.patient_object.medication_dict.__contains__(selected_medication.medication_name):
                 self.patient_object.add_missing_medication_to_dict(selected_medication)
             else:
                 self.patient_object.add_unknown_medication_to_dict(selected_medication)
-            self.master.app_observer.update_all()
+            self.master.app_observer.update(self)
+
+    def add_medication_to_ignore_dict(self, selected_medication: scriptScanner.Medication, medication_dict: dict):
+        if medication_dict.__contains__(selected_medication.medication_name):
+            medication_dict.pop(selected_medication.medication_name)
+        self.patient_object.add_medication_to_ignore_dict(selected_medication)
+        self.master.app_observer.update(self)
+
+    def remove_medication_from_ignore_dict(self, selected_medication: scriptScanner.Medication):
+        if self.patient_object.medications_to_ignore.__contains__(selected_medication.medication_name):
+            self.patient_object.remove_medication_from_ignore_dict(selected_medication)
+            if self.patient_object.medication_dict.__contains__(selected_medication.medication_name):
+                self.patient_object.add_missing_medication_to_dict(selected_medication)
+            else:
+                self.patient_object.add_unknown_medication_to_dict(selected_medication)
+            self.master.app_observer.update(self)
 
     def update(self):
         self._refresh_patient_status()
@@ -776,6 +821,7 @@ class PatientMedicationDetails(Frame):
         self.clear_label_frame(self.prn_medications_frame)
         self.clear_label_frame(self.unknown_medication_frame)
         self.clear_label_frame(self.incorrect_medication_dosage_frame)
+        self.clear_label_frame(self.ignore_medications_frame)
         self.populate_label_frame(self.production_medication_frame,
                                   "Repeat Pillpack Medications",
                                   1,
@@ -789,19 +835,32 @@ class PatientMedicationDetails(Frame):
         self.populate_label_frame(self.prn_medications_frame,
                                   "PRN Medications Outside Pillpack",
                                   5,
-                                  self.patient_object.prn_medications_dict, False, True
+                                  self.patient_object.prn_medications_dict,
+                                  False, True
                                   )
         self.populate_label_frame(self.missing_medication_frame,
                                   "Missing Medications",
                                   7,
-                                  self.patient_object.missing_medications_dict, True, False
+                                  self.patient_object.missing_medications_dict,
+                                  True, False,
+                                  True, False
                                   )
         self.populate_label_frame(self.unknown_medication_frame,
                                   "Unknown Medications",
                                   9,
-                                  self.patient_object.unknown_medications_dict, True, False
+                                  self.patient_object.unknown_medications_dict,
+                                  True, False,
+                                  True, False
                                   )
-        self.populate_incorrect_dosages_label_frame(11, self.incorrect_medication_dosage_frame)
+        self.populate_label_frame(self.ignore_medications_frame,
+                                  "Medications to Ignore",
+                                  11,
+                                  self.patient_object.medications_to_ignore,
+                                  False, False,
+                                  False, True)
+        self.populate_incorrect_dosages_label_frame(self.incorrect_medication_dosage_frame,
+                                                    13,
+                                                    True)
         self.display_canvas.update_idletasks()
         self.display_canvas.config(scrollregion=self.display_frame.bbox())
 

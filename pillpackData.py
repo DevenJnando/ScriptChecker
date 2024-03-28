@@ -2,7 +2,6 @@ import datetime
 import os
 import re
 import types
-import typing
 import xml.parsers.expat
 from functools import reduce
 from os import scandir
@@ -49,6 +48,7 @@ class PillpackPatient:
         self.unknown_medications_dict: dict = {}
         self.incorrect_dosages_dict: dict = {}
         self.prn_medications_dict: dict = {}
+        self.medications_to_ignore: dict = {}
 
     def do_not_produce(self, do_not_produce: bool):
         self.do_not_produce_flag = do_not_produce
@@ -117,6 +117,12 @@ class PillpackPatient:
 
     def remove_prn_medication_from_dict(self, med_to_be_removed: Medication):
         self.__remove_from_dict_of_medications(med_to_be_removed, self.prn_medications_dict)
+
+    def add_medication_to_ignore_dict(self, med_to_be_added: Medication):
+        self.__add_to_dict_of_medications(med_to_be_added, self.medications_to_ignore)
+
+    def remove_medication_from_ignore_dict(self, med_to_be_removed: Medication):
+        self.__remove_from_dict_of_medications(med_to_be_removed, self.medications_to_ignore)
 
     def __hash__(self):
         return hash((self.first_name, self.last_name, self.date_of_birth))
