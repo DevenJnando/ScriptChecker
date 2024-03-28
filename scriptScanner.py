@@ -14,10 +14,6 @@ consts.PERFECT_MATCH = "PERFECT_MATCH"
 consts.IMPERFECT_MATCH = "IMPERFECT_MATCH"
 consts.NO_MATCH = "NO_MATCH"
 consts.PROTOCOL = pickle.HIGHEST_PROTOCOL
-consts.COLLECTED_PATIENTS_FILE = 'patients.pk1'
-consts.PRNS_AND_IGNORED_MEDICATIONS_FILE = 'prns_and_ignored_meds.pk1'
-consts.PRN_KEY = "prns_dict"
-consts.IGNORE_KEY = "ignore_dict"
 
 
 class CollectedPatients:
@@ -88,8 +84,8 @@ def scan_script(raw_xml_text: str):
         return
 
 
-def load_pillpack_data():
-    patient_data_from_pillpack: dict = pillpackData.get_patient_medicine_data()
+def load_pillpack_data(prns_and_ignored_medications: dict):
+    patient_data_from_pillpack: dict = pillpackData.get_patient_medicine_data(prns_and_ignored_medications)
     return patient_data_from_pillpack
 
 
@@ -122,19 +118,21 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
     full_medication_dict: dict = patient_from_production.medication_dict
     script_medication_dict: dict = patient_from_script.medication_dict
     for medication in full_medication_dict.keys():
-        substring_results = [key for key in script_medication_dict.keys() if medication in key]
-        if (len(substring_results) > 0
-                and not patient_from_production.matched_medications_dict.__contains__(medication)):
-            pillpack_medication: Medication = full_medication_dict[medication]
-            script_medication: Medication = script_medication_dict[substring_results[0]]
-            if pillpack_medication.equals(script_medication):
-                patient_from_production.add_matched_medication_to_dict(pillpack_medication)
-                clear_medication_warning_dicts(patient_from_production, pillpack_medication)
-            else:
-                patient_from_production.add_incorrect_dosage_medication_to_dict(script_medication)
-        elif not patient_from_script.medication_dict.__contains__(medication):
-            if not patient_from_production.matched_medications_dict.__contains__(medication):
-                patient_from_production.add_missing_medication_to_dict(full_medication_dict[medication])
+        if not patient_from_production.prn_medications_dict.__contains__(medication)\
+                or not patient_from_production.medications_to_ignore.__contains__(medication):
+            substring_results = [key for key in script_medication_dict.keys() if medication in key]
+            if (len(substring_results) > 0
+                    and not patient_from_production.matched_medications_dict.__contains__(medication)):
+                pillpack_medication: Medication = full_medication_dict[medication]
+                script_medication: Medication = script_medication_dict[substring_results[0]]
+                if pillpack_medication.equals(script_medication):
+                    patient_from_production.add_matched_medication_to_dict(pillpack_medication)
+                    clear_medication_warning_dicts(patient_from_production, pillpack_medication)
+                else:
+                    patient_from_production.add_incorrect_dosage_medication_to_dict(script_medication)
+            elif not patient_from_script.medication_dict.__contains__(medication):
+                if not patient_from_production.matched_medications_dict.__contains__(medication):
+                    patient_from_production.add_missing_medication_to_dict(full_medication_dict[medication])
     for medication in script_medication_dict.keys():
         substring_results = [key for key in full_medication_dict.keys() if key in medication]
         if len(substring_results) > 0:
@@ -246,32 +244,25 @@ def scan_script_and_check_medications(collected_patients: CollectedPatients, sca
         print("Failed to read patient data from script...")
 
 
-def update_current_prns_and_ignored_medications(collected_patients: CollectedPatients,
+def update_current_prns_and_ignored_medications(patient: pillpackData.PillpackPatient,
+                                                collected_patients: CollectedPatients,
                                                 prns_and_ignored_medications: dict):
-    all_patients: list = list(collected_patients.pillpack_patient_dict.values())
-    if len(all_patients) > 0:
-        reduced_patients: list = reduce(list.__add__, all_patients)
-    else:
-        reduced_patients: list = []
-    for patient in reduced_patients:
-        if isinstance(patient, PillpackPatient):
-            prns_ignored_medications_sub_dict: dict = {
-                consts.PRN_KEY: patient.prn_medications_dict,
-                consts.IGNORE_KEY: patient.medications_to_ignore
-            }
-            prns_and_ignored_medications[patient] = prns_ignored_medications_sub_dict
-    return prns_and_ignored_medications
+    if collected_patients.pillpack_patient_dict.__contains__(patient):
+        key: str = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
+        prns_ignored_medications_sub_dict: dict = {
+            pillpackData.consts.PRN_KEY: patient.prn_medications_dict,
+            pillpackData.consts.IGNORE_KEY: patient.medications_to_ignore
+        }
+        prns_and_ignored_medications[key] = prns_ignored_medications_sub_dict
+        save_prns_and_ignored_medications(prns_and_ignored_medications)
 
 
 def save_collected_patients(collected_patients: CollectedPatients):
-    save_to_file(collected_patients, consts.COLLECTED_PATIENTS_FILE)
+    save_to_file(collected_patients, pillpackData.consts.COLLECTED_PATIENTS_FILE)
 
 
-def save_prns_and_ignored_medications(collected_patients: CollectedPatients):
-    patient_prns_and_ignored_medications_dict: dict = load_prns_and_ignored_medications_from_object()
-    patient_prns_and_ignored_medications_dict = (update_current_prns_and_ignored_medications
-                                                 (collected_patients, patient_prns_and_ignored_medications_dict))
-    save_to_file(patient_prns_and_ignored_medications_dict, consts.PRNS_AND_IGNORED_MEDICATIONS_FILE)
+def save_prns_and_ignored_medications(patient_prns_and_ignored_medications_dict: dict):
+    save_to_file(patient_prns_and_ignored_medications_dict, pillpackData.consts.PRNS_AND_IGNORED_MEDICATIONS_FILE)
 
 
 def save_to_file(object_to_save, filename):
@@ -292,14 +283,14 @@ def load_object(object_file_name: str):
 
 
 def load_collected_patients_from_object():
-    collected_patients: CollectedPatients = load_object(consts.COLLECTED_PATIENTS_FILE)
+    collected_patients: CollectedPatients = load_object(pillpackData.consts.COLLECTED_PATIENTS_FILE)
     if collected_patients is None:
         collected_patients = CollectedPatients()
     return collected_patients
 
 
 def load_prns_and_ignored_medications_from_object():
-    prns_and_ignored_medications: dict = load_object(consts.PRNS_AND_IGNORED_MEDICATIONS_FILE)
+    prns_and_ignored_medications: dict = load_object(pillpackData.consts.PRNS_AND_IGNORED_MEDICATIONS_FILE)
     if prns_and_ignored_medications is None:
         prns_and_ignored_medications = {}
     return prns_and_ignored_medications

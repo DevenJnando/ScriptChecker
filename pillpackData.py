@@ -16,6 +16,10 @@ consts.READY_TO_PRODUCE_CODE = 0
 consts.NOTHING_TO_COMPARE = 1
 consts.MISSING_MEDICATIONS = 2
 consts.DO_NOT_PRODUCE = 3
+consts.PRN_KEY = "prns_dict"
+consts.IGNORE_KEY = "ignore_dict"
+consts.COLLECTED_PATIENTS_FILE = 'patients.pk1'
+consts.PRNS_AND_IGNORED_MEDICATIONS_FILE = 'prns_and_ignored_meds.pk1'
 
 
 class Medication:
@@ -257,7 +261,7 @@ def __parse_xml(list_of_orders_raw_text: list):
     return order_information
 
 
-def get_patient_medicine_data():
+def get_patient_medicine_data(prns_and_ignored_medications: dict):
     if config is not None:
         ppc_processed_files = __scan_pillpack_folder(config["pillpackDataLocation"])
         dict_of_patients: dict = {}
@@ -266,6 +270,7 @@ def get_patient_medicine_data():
             list_of_orders: list = reduce(list.__add__, __parse_xml(list_of_orders_raw_text))
             for order in list_of_orders:
                 patient_object = __create_patient_object(order)
+                patient_object = retrieve_prns_and_ignored_medications(patient_object, prns_and_ignored_medications)
                 if isinstance(patient_object, PillpackPatient):
                     if dict_of_patients.__contains__(patient_object.last_name):
                         list_of_patients: list = dict_of_patients.get(patient_object.last_name)
@@ -276,6 +281,14 @@ def get_patient_medicine_data():
                         list_of_patients: list = [patient_object]
                         dict_of_patients[patient_object.last_name] = list_of_patients
         return dict_of_patients
+
+
+def retrieve_prns_and_ignored_medications(patient: PillpackPatient, prns_and_ignored_medications: dict):
+    key = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
+    if prns_and_ignored_medications.__contains__(key):
+        patient.prn_medications_dict = prns_and_ignored_medications[consts.PRN_KEY]
+        patient.medications_to_ignore = prns_and_ignored_medications[consts.IGNORE_KEY]
+    return patient
 
 
 def archive_pillpack_production(archive_file_name: str):

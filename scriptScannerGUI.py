@@ -250,8 +250,7 @@ class HomeScreen(Frame):
         self.production_patients_tree.heading('Condition', text="Condition")
         self.production_patients_tree.bind('<Double-1>',
                                            lambda e: self.on_treeview_double_click
-                                           (self.production_patients_tree,
-                                            self.master.collected_patients.pillpack_patient_dict)
+                                           (self.production_patients_tree)
                                            )
         production_patients_filter_label = Label(production_patients_results, font=self.font, text="Filter results: ")
         production_patients_filter_combobox = tkinter.ttk.Combobox(production_patients_results,
@@ -293,8 +292,7 @@ class HomeScreen(Frame):
         self.perfect_patients_tree.heading('Condition', text="Condition")
         self.perfect_patients_tree.bind('<Double-1>',
                                         lambda e: self.on_treeview_double_click
-                                        (self.perfect_patients_tree,
-                                         self.master.collected_patients.matched_patients)
+                                        (self.perfect_patients_tree)
                                         )
         perfect_patients_filter_label = Label(perfect_match_patients, font=self.font, text="Filter results: ")
         perfect_patients_filter_combobox = tkinter.ttk.Combobox(perfect_match_patients,
@@ -336,8 +334,7 @@ class HomeScreen(Frame):
         self.imperfect_patients_tree.heading('Condition', text="Condition")
         self.imperfect_patients_tree.bind('<Double-1>',
                                           lambda e: self.on_treeview_double_click
-                                          (self.imperfect_patients_tree,
-                                           self.master.collected_patients.minor_mismatch_patients)
+                                          (self.imperfect_patients_tree)
                                           )
         imperfect_patients_filter_label = Label(minor_mismatch_patients, font=self.font, text="Filter results: ")
         imperfect_patients_filter_combobox = tkinter.ttk.Combobox(minor_mismatch_patients,
@@ -379,8 +376,7 @@ class HomeScreen(Frame):
         self.mismatched_patients_tree.heading('Condition', text="Condition")
         self.mismatched_patients_tree.bind('<Double-1>',
                                            lambda e: self.on_treeview_double_click
-                                           (self.mismatched_patients_tree,
-                                            self.master.collected_patients.severe_mismatch_patients)
+                                           (self.mismatched_patients_tree)
                                            )
         mismatched_patients_filter_label = Label(severe_mismatch_patients, font=self.font, text="Filter results: ")
         mismatched_patients_filter_combobox = tkinter.ttk.Combobox(severe_mismatch_patients,
@@ -489,15 +485,15 @@ class HomeScreen(Frame):
     def update(self):
         self._refresh_patient_status()
         self._refresh_treeview(self.production_patients_tree,
-                              self.master.collected_patients.pillpack_patient_dict)
+                               self.master.collected_patients.pillpack_patient_dict)
         self._refresh_treeview(self.perfect_patients_tree,
-                              self.master.collected_patients.matched_patients)
+                               self.master.collected_patients.matched_patients)
 
         self._refresh_treeview(self.imperfect_patients_tree,
-                              self.master.collected_patients.minor_mismatch_patients)
+                               self.master.collected_patients.minor_mismatch_patients)
 
         self._refresh_treeview(self.mismatched_patients_tree,
-                              self.master.collected_patients.severe_mismatch_patients)
+                               self.master.collected_patients.severe_mismatch_patients)
 
     def check_if_pillpack_data_is_loaded(self):
         if len(self.master.collected_patients.pillpack_patient_dict) == 0:
@@ -542,14 +538,14 @@ class HomeScreen(Frame):
                 self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
                 self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.READY_TO_PRODUCE_CODE)
 
-    def on_treeview_double_click(self, tree_to_select_from: Treeview, dictionary_to_lookup: dict):
+    def on_treeview_double_click(self, tree_to_select_from: Treeview):
         if isinstance(tree_to_select_from, Treeview):
             try:
                 item = tree_to_select_from.focus()
                 column_values = tree_to_select_from.item(item).get("values")
                 first_name = column_values[0]
                 last_name = column_values[1]
-                patient_list = dictionary_to_lookup.get(last_name)
+                patient_list = self.master.collected_patients.pillpack_patient_dict.get(last_name)
                 if isinstance(patient_list, list):
                     filtered_patients = (list
                                          (filter
@@ -791,6 +787,9 @@ class PatientMedicationDetails(Frame):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
         self.patient_object.add_prn_medication_to_dict(selected_medication)
+        scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
+                                                                  self.master.collected_patients,
+                                                                  self.master.loaded_prns_and_ignored_medications)
         self.master.app_observer.update(self)
 
     def remove_prn_medication(self, selected_medication: scriptScanner.Medication):
@@ -800,12 +799,18 @@ class PatientMedicationDetails(Frame):
                 self.patient_object.add_missing_medication_to_dict(selected_medication)
             else:
                 self.patient_object.add_unknown_medication_to_dict(selected_medication)
+            scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
+                                                                      self.master.collected_patients,
+                                                                      self.master.loaded_prns_and_ignored_medications)
             self.master.app_observer.update(self)
 
     def add_medication_to_ignore_dict(self, selected_medication: scriptScanner.Medication, medication_dict: dict):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
         self.patient_object.add_medication_to_ignore_dict(selected_medication)
+        scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
+                                                                  self.master.collected_patients,
+                                                                  self.master.loaded_prns_and_ignored_medications)
         self.master.app_observer.update(self)
 
     def remove_medication_from_ignore_dict(self, selected_medication: scriptScanner.Medication):
@@ -815,6 +820,9 @@ class PatientMedicationDetails(Frame):
                 self.patient_object.add_missing_medication_to_dict(selected_medication)
             else:
                 self.patient_object.add_unknown_medication_to_dict(selected_medication)
+            scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
+                                                                      self.master.collected_patients,
+                                                                      self.master.loaded_prns_and_ignored_medications)
             self.master.app_observer.update(self)
 
     def update(self):
@@ -992,11 +1000,11 @@ def load_patients_from_object(application: App):
 
 
 def populate_pillpack_production_data(application: App):
-    application.collected_patients.set_pillpack_patient_dict(scriptScanner.load_pillpack_data())
-    scriptScanner.update_current_prns_and_ignored_medications(application.collected_patients,
-                                                              application.loaded_prns_and_ignored_medications)
+    application.collected_patients.set_pillpack_patient_dict(
+        scriptScanner.load_pillpack_data(application.loaded_prns_and_ignored_medications
+                                         )
+    )
     scriptScanner.save_collected_patients(application.collected_patients)
-    scriptScanner.save_prns_and_ignored_medications(application.collected_patients)
 
 
 app = App()
