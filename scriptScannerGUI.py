@@ -3,6 +3,7 @@ import sys
 import tkinter
 import types
 import typing
+from functools import reduce
 from tkinter.ttk import Treeview
 from tkinter import *
 from tkinter import font
@@ -88,7 +89,8 @@ class App(tkinter.Tk):
         self.style.theme_use("forest-dark")
         self.geometry("1080x720")
         self.title("Pillpack Script Checker")
-        self.collected_patients = scriptScanner.CollectedPatients()
+        self.collected_patients = scriptScanner.load_collected_patients_from_object()
+        self.loaded_prns_and_ignored_medications: dict = scriptScanner.load_prns_and_ignored_medications_from_object()
         self.app_observer: Observer = Observer()
         self.total_medications = 0
         self.title_font = font.Font(family='Verdana', size=28, weight="bold")
@@ -126,7 +128,7 @@ class SideBar(Frame):
                                           command=lambda: self.check_if_pillpack_data_is_loaded())
         self.scan_scripts_button.grid(row=1, column=0, pady=50)
         self.archive_production_data_button = Button(self, text="Archive Production Data")
-        self.archive_production_data_button.grid(row=3, column=0)
+        self.archive_production_data_button.grid(row=2, column=0, pady=50)
 
     def check_if_pillpack_data_is_loaded(self):
         if len(self.master.collected_patients.pillpack_patient_dict) == 0:
@@ -153,6 +155,9 @@ class SideBar(Frame):
             self.script_window.grab_set()
         else:
             self.script_window.focus()  # if window exists focus it
+
+    def archive_pillpack_production(self):
+        pass
 
 
 class HomeScreen(Frame):
@@ -888,6 +893,12 @@ class ScanScripts(Toplevel):
                                                   self.main_application.app_observer.update_all()])
         self.entry.pack(padx=20, pady=20)
 
+        all_patients: list = list(self.main_application.collected_patients.pillpack_patient_dict.values())
+        if len(all_patients) > 0:
+            reduced_patients: list = reduce(list.__add__, all_patients)
+        else:
+            reduced_patients: list = []
+
         self.patient_tree = Treeview(self, columns=('No. of Patients',), height=3)
         self.patient_tree.heading('No. of Patients', text="No. of Patients")
         self.patient_tree.insert('', 'end', 'perfect_matches', text="Perfect Matches", tags=('perfect',))
@@ -901,7 +912,7 @@ class ScanScripts(Toplevel):
         self.patient_tree.tag_configure('severe', background='#a30202')
         self.patient_tree.set('perfect_matches', 'No. of Patients',
                               str(len(self.main_application.collected_patients.matched_patients)) + "/"
-                              + str(len(self.main_application.collected_patients.pillpack_patient_dict)))
+                              + str(len(reduced_patients)))
         self.patient_tree.set('minor_mismatches', 'No. of Patients',
                               len(self.main_application.collected_patients.minor_mismatch_patients))
         self.patient_tree.set('severe_mismatches', 'No. of Patients',
@@ -911,41 +922,16 @@ class ScanScripts(Toplevel):
 
     def scan_scripts(self, application: App, script_input: str):
         scriptScanner.scan_script_and_check_medications(application.collected_patients, script_input)
-        if self.patient_tree is None:
-            if (len(application.collected_patients.matched_patients) > 0
-                    or len(application.collected_patients.minor_mismatch_patients) > 0
-                    or len(application.collected_patients.severe_mismatch_patients) > 0):
-                self.patient_tree = Treeview(self, columns=('No. of Patients',), height=3)
-                self.patient_tree.heading('No. of Patients', text="No. of Patients")
-                self.patient_tree.insert('', 'end', 'perfect_matches', text="Perfect Matches", tags=('perfect',))
-                self.__iterate_patients(application.collected_patients.matched_patients.values(), 'perfect_matches')
-                self.patient_tree.insert('', 'end', 'minor_mismatches', text="Minor Mismatches", tags=('minor',))
-                self.__iterate_patients(application.collected_patients.minor_mismatch_patients, 'minor_mismatches')
-                self.patient_tree.insert('', 'end', 'severe_mismatches', text="Severe Mismatches", tags=('severe',))
-                self.__iterate_patients(application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
-                self.patient_tree.tag_configure('perfect', background='#2f8000')
-                self.patient_tree.tag_configure('minor', background='#a8a82c')
-                self.patient_tree.tag_configure('severe', background='#a30202')
-                self.patient_tree.set('perfect_matches', 'No. of Patients',
-                                      str(len(application.collected_patients.matched_patients)) + "/"
-                                      + str(len(application.collected_patients.pillpack_patient_dict)))
-                self.patient_tree.set('minor_mismatches', 'No. of Patients',
-                                      len(application.collected_patients.minor_mismatch_patients))
-                self.patient_tree.set('severe_mismatches', 'No. of Patients',
-                                      len(application.collected_patients.severe_mismatch_patients))
-                self.patient_tree.bind('<Double-1>', self.on_treeview_double_click)
-                self.patient_tree.pack(padx=20)
-        else:
-            self.patient_tree.set('perfect_matches', 'No. of Patients',
-                                  str(len(application.collected_patients.matched_patients)) + "/"
-                                  + str(len(application.collected_patients.pillpack_patient_dict)))
-            self.__iterate_patients(application.collected_patients.matched_patients.values(), 'perfect_matches')
-            self.patient_tree.set('minor_mismatches', 'No. of Patients',
-                                  len(application.collected_patients.minor_mismatch_patients))
-            self.__iterate_patients(application.collected_patients.minor_mismatch_patients, 'minor_mismatches')
-            self.patient_tree.set('severe_mismatches', 'No. of Patients',
-                                  len(application.collected_patients.severe_mismatch_patients))
-            self.__iterate_patients(application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
+        self.patient_tree.set('perfect_matches', 'No. of Patients',
+                              str(len(application.collected_patients.matched_patients)) + "/"
+                              + str(len(application.collected_patients.pillpack_patient_dict)))
+        self.__iterate_patients(application.collected_patients.matched_patients.values(), 'perfect_matches')
+        self.patient_tree.set('minor_mismatches', 'No. of Patients',
+                              len(application.collected_patients.minor_mismatch_patients))
+        self.__iterate_patients(application.collected_patients.minor_mismatch_patients, 'minor_mismatches')
+        self.patient_tree.set('severe_mismatches', 'No. of Patients',
+                              len(application.collected_patients.severe_mismatch_patients))
+        self.__iterate_patients(application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
 
         self.entry.delete(0, tkinter.END)
         self.entry.focus()
@@ -1006,9 +992,11 @@ def load_patients_from_object(application: App):
 
 
 def populate_pillpack_production_data(application: App):
-    patients: scriptScanner.CollectedPatients = scriptScanner.load_collected_patients_from_object()
-    patients.set_pillpack_patient_dict(scriptScanner.load_pillpack_data())
-    application.collected_patients = patients
+    application.collected_patients.set_pillpack_patient_dict(scriptScanner.load_pillpack_data())
+    scriptScanner.update_current_prns_and_ignored_medications(application.collected_patients,
+                                                              application.loaded_prns_and_ignored_medications)
+    scriptScanner.save_collected_patients(application.collected_patients)
+    scriptScanner.save_prns_and_ignored_medications(application.collected_patients)
 
 
 app = App()
