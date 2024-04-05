@@ -118,20 +118,21 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
     full_medication_dict: dict = patient_from_production.medication_dict
     script_medication_dict: dict = patient_from_script.medication_dict
     for medication in full_medication_dict.keys():
-        if not patient_from_production.prn_medications_dict.__contains__(medication)\
-                or not patient_from_production.medications_to_ignore.__contains__(medication):
-            substring_results = [key for key in script_medication_dict.keys() if medication in key]
-            if (len(substring_results) > 0
-                    and not patient_from_production.matched_medications_dict.__contains__(medication)):
-                pillpack_medication: Medication = full_medication_dict[medication]
-                script_medication: Medication = script_medication_dict[substring_results[0]]
-                if pillpack_medication.equals(script_medication):
-                    patient_from_production.add_matched_medication_to_dict(pillpack_medication)
-                    clear_medication_warning_dicts(patient_from_production, pillpack_medication)
-                else:
-                    patient_from_production.add_incorrect_dosage_medication_to_dict(script_medication)
-            elif not patient_from_script.medication_dict.__contains__(medication):
-                if not patient_from_production.matched_medications_dict.__contains__(medication):
+        substring_results = [key for key in script_medication_dict.keys() if medication in key]
+        if (len(substring_results) > 0
+                and not patient_from_production.matched_medications_dict.__contains__(medication)):
+            pillpack_medication: Medication = full_medication_dict[medication]
+            script_medication: Medication = script_medication_dict[substring_results[0]]
+            if pillpack_medication.equals(script_medication):
+                patient_from_production.add_matched_medication_to_dict(pillpack_medication)
+                clear_medication_warning_dicts(patient_from_production, pillpack_medication)
+            else:
+                patient_from_production.add_incorrect_dosage_medication_to_dict(script_medication)
+        elif not patient_from_script.medication_dict.__contains__(medication):
+            if not patient_from_production.matched_medications_dict.__contains__(medication):
+                if (not patient_from_production.prn_medications_dict.__contains__(medication)
+                        and not patient_from_production.medications_to_ignore.__contains__(medication)):
+                    print(medication)
                     patient_from_production.add_missing_medication_to_dict(full_medication_dict[medication])
     for medication in script_medication_dict.keys():
         substring_results = [key for key in full_medication_dict.keys() if key in medication]
@@ -240,6 +241,7 @@ def scan_script_and_check_medications(collected_patients: CollectedPatients, sca
     if isinstance(script_patient_object, PillpackPatient):
         if not extend_existing_patient_medication_dict(script_patient_object, collected_patients):
             check_if_patient_is_in_pillpack_production(collected_patients.pillpack_patient_dict, script_patient_object, collected_patients)
+        save_collected_patients(collected_patients)
     else:
         print("Failed to read patient data from script...")
 

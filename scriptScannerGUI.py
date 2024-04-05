@@ -874,6 +874,8 @@ class PatientMedicationDetails(Frame):
         self.populate_incorrect_dosages_label_frame(self.incorrect_medication_dosage_frame,
                                                     13,
                                                     True)
+        print(self.patient_object.medications_to_ignore.values())
+        print(self.patient_object.prn_medications_dict.values())
         self.display_canvas.update_idletasks()
         self.display_canvas.config(scrollregion=self.display_frame.bbox())
 
