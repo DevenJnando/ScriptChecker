@@ -132,7 +132,6 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
             if not patient_from_production.matched_medications_dict.__contains__(medication):
                 if (not patient_from_production.prn_medications_dict.__contains__(medication)
                         and not patient_from_production.medications_to_ignore.__contains__(medication)):
-                    print(medication)
                     patient_from_production.add_missing_medication_to_dict(full_medication_dict[medication])
     for medication in script_medication_dict.keys():
         substring_results = [key for key in full_medication_dict.keys() if key in medication]
@@ -256,7 +255,6 @@ def update_current_prns_and_ignored_medications(patient: pillpackData.PillpackPa
             pillpackData.consts.IGNORE_KEY: patient.medications_to_ignore
         }
         prns_and_ignored_medications[key] = prns_ignored_medications_sub_dict
-        print(prns_and_ignored_medications)
         save_prns_and_ignored_medications(prns_and_ignored_medications)
 
 
