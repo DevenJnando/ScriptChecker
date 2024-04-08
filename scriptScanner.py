@@ -27,13 +27,13 @@ class CollectedPatients:
 
     @staticmethod
     def __add_to_dict_of_patients(patient_to_add: PillpackPatient, dict_to_add_to: dict):
-        if dict_to_add_to.__contains__(patient_to_add.last_name):
-            patients_with_last_name: list = dict_to_add_to.get(patient_to_add.last_name)
+        if dict_to_add_to.__contains__(patient_to_add.last_name.lower()):
+            patients_with_last_name: list = dict_to_add_to.get(patient_to_add.last_name.lower())
             patients_with_last_name.append(patient_to_add)
-            dict_to_add_to[patient_to_add.last_name] = patients_with_last_name
+            dict_to_add_to[patient_to_add.last_name.lower()] = patients_with_last_name
         else:
             list_of_patients: list = [patient_to_add]
-            dict_to_add_to[patient_to_add.last_name] = list_of_patients
+            dict_to_add_to[patient_to_add.last_name.lower()] = list_of_patients
 
     def set_pillpack_patient_dict(self, patient_dict: dict):
         self.pillpack_patient_dict = patient_dict
@@ -43,13 +43,13 @@ class CollectedPatients:
             "PatientObject": patient_to_add,
             "Status": status
         }
-        if self.all_patients.__contains__(patient_to_add.last_name):
-            patients_with_last_name: list = self.all_patients.get(patient_to_add.last_name)
+        if self.all_patients.__contains__(patient_to_add.last_name.lower()):
+            patients_with_last_name: list = self.all_patients.get(patient_to_add.last_name.lower())
             patients_with_last_name.append(patient_wrapper)
-            self.all_patients[patient_to_add.last_name] = patients_with_last_name
+            self.all_patients[patient_to_add.last_name.lower()] = patients_with_last_name
         else:
             list_of_wrappers: list = [patient_wrapper]
-            self.all_patients[patient_to_add.last_name] = list_of_wrappers
+            self.all_patients[patient_to_add.last_name.lower()] = list_of_wrappers
 
     def add_matched_patient(self, patient_to_add: PillpackPatient):
         self.__add_to_dict_of_patients(patient_to_add, self.matched_patients)
@@ -154,8 +154,8 @@ def clear_medication_warning_dicts(patient: PillpackPatient, medication: Medicat
 
 def extend_existing_patient_medication_dict(patient_object: PillpackPatient, collected_patients: CollectedPatients):
     exists: bool = False
-    if collected_patients.all_patients.__contains__(patient_object.last_name):
-        list_of_wrappers: list = collected_patients.all_patients.get(patient_object.last_name)
+    if collected_patients.all_patients.__contains__(patient_object.last_name.lower()):
+        list_of_wrappers: list = collected_patients.all_patients.get(patient_object.last_name.lower())
         for patient_wrapper in list_of_wrappers:
             if isinstance(patient_wrapper["PatientObject"], PillpackPatient):
                 unwrapped_patient: PillpackPatient = patient_wrapper["PatientObject"]
@@ -183,7 +183,7 @@ def compare_patient_details(pillpack_patient: PillpackPatient, script_patient: P
         "Patient": PillpackPatient("", "", datetime.date.today()),
         "PerfectMatch": False
     }
-    match_patient_first_name = re.match(pillpack_patient.first_name, script_patient.first_name)
+    match_patient_first_name = re.match(pillpack_patient.first_name.lower(), script_patient.first_name.lower())
     if match_patient_first_name is not None:
         matches["Patient"] = pillpack_patient
         if pillpack_patient.date_of_birth == script_patient.date_of_birth:
@@ -193,8 +193,8 @@ def compare_patient_details(pillpack_patient: PillpackPatient, script_patient: P
 
 def query_pillpack_patient_list(pillpack_patient_dict, script_patient: PillpackPatient):
     patient_matches_list: list = []
-    if pillpack_patient_dict.__contains__(script_patient.last_name):
-        patients_with_last_name = pillpack_patient_dict.get(script_patient.last_name)
+    if pillpack_patient_dict.__contains__(script_patient.last_name.lower()):
+        patients_with_last_name = pillpack_patient_dict.get(script_patient.last_name.lower())
         for patient in patients_with_last_name:
             if isinstance(patient, PillpackPatient):
                 pillpack_patient_matches: dict = compare_patient_details(patient, script_patient)
@@ -250,7 +250,7 @@ def update_current_prns_and_ignored_medications(patient: pillpackData.PillpackPa
                                                 collected_patients: CollectedPatients,
                                                 prns_and_ignored_medications: dict):
     if collected_patients.pillpack_patient_dict.__contains__(patient):
-        key: str = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
+        key: str = patient.first_name.lower() + " " + patient.last_name.lower() + " " + str(patient.date_of_birth)
         prns_ignored_medications_sub_dict: dict = {
             pillpackData.consts.PRN_KEY: patient.prn_medications_dict,
             pillpackData.consts.IGNORE_KEY: patient.medications_to_ignore
