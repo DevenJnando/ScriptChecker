@@ -249,13 +249,14 @@ def scan_script_and_check_medications(collected_patients: CollectedPatients, sca
 def update_current_prns_and_ignored_medications(patient: pillpackData.PillpackPatient,
                                                 collected_patients: CollectedPatients,
                                                 prns_and_ignored_medications: dict):
-    if collected_patients.pillpack_patient_dict.__contains__(patient):
+    if collected_patients.pillpack_patient_dict.__contains__(patient.last_name.lower()):
         key: str = patient.first_name.lower() + " " + patient.last_name.lower() + " " + str(patient.date_of_birth)
         prns_ignored_medications_sub_dict: dict = {
             pillpackData.consts.PRN_KEY: patient.prn_medications_dict,
             pillpackData.consts.IGNORE_KEY: patient.medications_to_ignore
         }
         prns_and_ignored_medications[key] = prns_ignored_medications_sub_dict
+        print(prns_and_ignored_medications)
         save_prns_and_ignored_medications(prns_and_ignored_medications)
 
 

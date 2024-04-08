@@ -863,8 +863,6 @@ class PatientMedicationDetails(Frame):
         self.populate_incorrect_dosages_label_frame(self.incorrect_medication_dosage_frame,
                                                     13,
                                                     True)
-        print(self.patient_object.medications_to_ignore.values())
-        print(self.patient_object.prn_medications_dict.values())
         self.display_canvas.update_idletasks()
         self.display_canvas.config(scrollregion=self.display_frame.bbox())
 
@@ -994,11 +992,6 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: scriptScanner.Pillp
     matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0] \
         if (len(pillpack_patients) > 0) else patient_to_be_matched
     return matching_pillpack_patient
-
-
-def load_patients_from_object(application: App):
-    patients: scriptScanner.CollectedPatients = scriptScanner.load_collected_patients_from_object()
-    application.collected_patients = patients
 
 
 def populate_pillpack_production_data(application: App):

@@ -18,8 +18,8 @@ consts.MISSING_MEDICATIONS = 2
 consts.DO_NOT_PRODUCE = 3
 consts.PRN_KEY = "prns_dict"
 consts.IGNORE_KEY = "ignore_dict"
-consts.COLLECTED_PATIENTS_FILE = 'patients.pk1'
-consts.PRNS_AND_IGNORED_MEDICATIONS_FILE = 'prns_and_ignored_meds.pk1'
+consts.COLLECTED_PATIENTS_FILE = 'Patients.pk1'
+consts.PRNS_AND_IGNORED_MEDICATIONS_FILE = 'PrnsAndIgnoredMeds.pk1'
 
 
 class Medication:
@@ -286,8 +286,8 @@ def get_patient_medicine_data(prns_and_ignored_medications: dict):
 def retrieve_prns_and_ignored_medications(patient: PillpackPatient, prns_and_ignored_medications: dict):
     key = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
     if prns_and_ignored_medications.__contains__(key.lower()):
-        patient.prn_medications_dict = prns_and_ignored_medications[consts.PRN_KEY]
-        patient.medications_to_ignore = prns_and_ignored_medications[consts.IGNORE_KEY]
+        patient.prn_medications_dict = prns_and_ignored_medications[key.lower()][consts.PRN_KEY]
+        patient.medications_to_ignore = prns_and_ignored_medications[key.lower()][consts.IGNORE_KEY]
     return patient
 
 
