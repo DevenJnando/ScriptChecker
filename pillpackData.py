@@ -272,20 +272,20 @@ def get_patient_medicine_data(prns_and_ignored_medications: dict):
                 patient_object = __create_patient_object(order)
                 patient_object = retrieve_prns_and_ignored_medications(patient_object, prns_and_ignored_medications)
                 if isinstance(patient_object, PillpackPatient):
-                    if dict_of_patients.__contains__(patient_object.last_name):
-                        list_of_patients: list = dict_of_patients.get(patient_object.last_name)
+                    if dict_of_patients.__contains__(patient_object.last_name.lower()):
+                        list_of_patients: list = dict_of_patients.get(patient_object.last_name.lower())
                         list_of_patients.append(patient_object)
                         list_of_patients = list(dict.fromkeys(list_of_patients))
-                        dict_of_patients[patient_object.last_name] = list_of_patients
+                        dict_of_patients[patient_object.last_name.lower()] = list_of_patients
                     else:
                         list_of_patients: list = [patient_object]
-                        dict_of_patients[patient_object.last_name] = list_of_patients
+                        dict_of_patients[patient_object.last_name.lower()] = list_of_patients
         return dict_of_patients
 
 
 def retrieve_prns_and_ignored_medications(patient: PillpackPatient, prns_and_ignored_medications: dict):
     key = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
-    if prns_and_ignored_medications.__contains__(key):
+    if prns_and_ignored_medications.__contains__(key.lower()):
         patient.prn_medications_dict = prns_and_ignored_medications[consts.PRN_KEY]
         patient.medications_to_ignore = prns_and_ignored_medications[consts.IGNORE_KEY]
     return patient

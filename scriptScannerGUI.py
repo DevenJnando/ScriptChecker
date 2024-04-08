@@ -418,16 +418,10 @@ class HomeScreen(Frame):
             if isinstance(patient_list, list):
                 for patient in patient_list:
                     if isinstance(patient, scriptScanner.PillpackPatient):
-                        pillpack_patients: list = self.master.collected_patients.pillpack_patient_dict.get(
-                            patient.last_name)
-                        pillpack_patients = list(
-                            filter
-                            (lambda entity:
-                             typing.cast(scriptScanner.PillpackPatient, entity).first_name == patient.first_name,
-                             pillpack_patients)
+                        matching_pillpack_patient: scriptScanner.PillpackPatient = (
+                            match_patient_to_pillpack_patient
+                            (patient, self.master.collected_patients.pillpack_patient_dict)
                         )
-                        matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0] \
-                            if(len(pillpack_patients) > 0) else patient
                         key = patient.first_name + " " + patient.last_name
                         if not tree_to_refresh.exists(key):
                             tree_to_refresh.insert('', 'end', key, text=key)
@@ -466,15 +460,10 @@ class HomeScreen(Frame):
                 if isinstance(patient_list, list):
                     for patient in patient_list:
                         if isinstance(patient, scriptScanner.PillpackPatient):
-                            pillpack_patients: list = self.master.collected_patients.pillpack_patient_dict.get(
-                                patient.last_name)
-                            pillpack_patients = list(
-                                filter
-                                (lambda entity:
-                                 typing.cast(scriptScanner.PillpackPatient, entity).first_name == patient.first_name,
-                                 pillpack_patients)
+                            matching_pillpack_patient: scriptScanner.PillpackPatient = (
+                                match_patient_to_pillpack_patient
+                                (patient, self.master.collected_patients.pillpack_patient_dict)
                             )
-                            matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0]
                             key = patient.first_name + " " + patient.last_name
                             if (tree_to_filter.exists(key)
                                     and matching_pillpack_patient.ready_to_produce_code != search_code):
@@ -545,11 +534,11 @@ class HomeScreen(Frame):
                 column_values = tree_to_select_from.item(item).get("values")
                 first_name = column_values[0]
                 last_name = column_values[1]
-                patient_list = self.master.collected_patients.pillpack_patient_dict.get(last_name)
+                patient_list = self.master.collected_patients.pillpack_patient_dict.get(last_name.lower())
                 if isinstance(patient_list, list):
                     filtered_patients = (list
                                          (filter
-                                          (lambda patient: patient.first_name == first_name,
+                                          (lambda patient: patient.first_name.lower() == first_name.lower(),
                                            patient_list)
                                           )
                                          )
@@ -951,15 +940,10 @@ class ScanScripts(Toplevel):
             if isinstance(patient_list, list):
                 for patient in patient_list:
                     if isinstance(patient, scriptScanner.PillpackPatient):
-                        pillpack_patients: list = self.main_application.collected_patients.pillpack_patient_dict.get(
-                            patient.last_name)
-                        pillpack_patients = list(
-                            filter
-                            (lambda entity:
-                             typing.cast(scriptScanner.PillpackPatient, entity).first_name == patient.first_name,
-                             pillpack_patients)
+                        matching_pillpack_patient: scriptScanner.PillpackPatient = (
+                            match_patient_to_pillpack_patient
+                            (patient, self.main_application.collected_patients.pillpack_patient_dict)
                         )
-                        matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0]
                         if self.patient_tree.exists(patient.first_name + " " + patient.last_name):
                             if len(patient.matched_medications_dict) == len(matching_pillpack_patient.medication_dict):
                                 self.patient_tree.item(patient.first_name + " " + patient.last_name,
@@ -987,13 +971,29 @@ class ScanScripts(Toplevel):
             item = tree.selection()[0]
             first_name = item.split(" ")[0]
             last_name = item.split(" ")[1]
-            if self.main_application.collected_patients.pillpack_patient_dict.__contains__(last_name):
-                list_of_patients: list = self.main_application.collected_patients.pillpack_patient_dict.get(last_name)
+            if self.main_application.collected_patients.pillpack_patient_dict.__contains__(last_name.lower()):
+                list_of_patients: list = self.main_application.collected_patients.pillpack_patient_dict.get(last_name.lower())
                 for patient in list_of_patients:
                     if isinstance(patient, pillpackData.PillpackPatient):
-                        if patient.first_name == first_name:
+                        if patient.first_name.lower() == first_name.lower():
                             self.main_application.show_frame(consts.VIEW_PATIENT_SCREEN, patient)
                             self.parent.focus()
+
+
+def match_patient_to_pillpack_patient(patient_to_be_matched: scriptScanner.PillpackPatient, pillpack_patient_dict: dict):
+    pillpack_patients: list = pillpack_patient_dict.get(
+        patient_to_be_matched.last_name.lower())
+    if pillpack_patients is None:
+        pillpack_patients = []
+    pillpack_patients = list(
+        filter
+        (lambda entity:
+         typing.cast(scriptScanner.PillpackPatient, entity).first_name.lower() == patient_to_be_matched.first_name.lower(),
+         pillpack_patients)
+    )
+    matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0] \
+        if (len(pillpack_patients) > 0) else patient_to_be_matched
+    return matching_pillpack_patient
 
 
 def load_patients_from_object(application: App):
