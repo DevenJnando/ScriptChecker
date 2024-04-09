@@ -291,11 +291,12 @@ def retrieve_prns_and_ignored_medications(patient: PillpackPatient, prns_and_ign
     return patient
 
 
-def archive_pillpack_production(archive_file_name: str):
+def archive_pillpack_production(archive_file):
     if config is not None:
         ppc_processed_files = __scan_pillpack_folder(config["pillpackDataLocation"])
         pillpack_directory = config["pillpackDataLocation"] + "\\"
-        with ZipFile(pillpack_directory + archive_file_name, 'w') as archived_production_data:
+        with ZipFile(archive_file.name, 'w') as archived_production_data:
             for file in ppc_processed_files:
                 archived_production_data.write(pillpack_directory + file.name)
                 os.remove(pillpack_directory + file.name)
+            os.remove(consts.COLLECTED_PATIENTS_FILE)

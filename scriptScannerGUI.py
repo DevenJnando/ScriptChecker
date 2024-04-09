@@ -7,6 +7,7 @@ from functools import reduce
 from tkinter.ttk import Treeview
 from tkinter import *
 from tkinter import font
+from tkinter import filedialog
 
 import pillpackData
 import scriptScanner
@@ -127,7 +128,8 @@ class SideBar(Frame):
         self.scan_scripts_button = Button(self, text="Scan Scripts",
                                           command=lambda: self.check_if_pillpack_data_is_loaded())
         self.scan_scripts_button.grid(row=1, column=0, pady=50)
-        self.archive_production_data_button = Button(self, text="Archive Production Data")
+        self.archive_production_data_button = Button(self, text="Archive Production Data",
+                                                     command=lambda: self.confirm_production_archival())
         self.archive_production_data_button.grid(row=2, column=0, pady=50)
 
     def check_if_pillpack_data_is_loaded(self):
@@ -148,6 +150,21 @@ class SideBar(Frame):
             continue_button.grid(row=1, column=1, padx=50, sticky="ew")
         else:
             self.open_scan_scripts_window()
+
+    def confirm_production_archival(self):
+        warning = Toplevel(master=self.master)
+        warning.geometry("500x500")
+        warning_label = Label(warning, text="Warning: Archiving this production will PERMENANTLY archive "
+                                            "all working data. This means you will not be able to make any more "
+                                            "modifications on the current production after archival. "
+                                            "Are you sure you wish to archive the current production? ",
+                              wraplength=300)
+        warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+        cancel_button = Button(warning, text="Cancel", command=warning.destroy)
+        cancel_button.grid(row=1, column=0, padx=50, sticky="ew")
+        archive_button = Button(warning, text="OK",
+                                command=lambda: [warning.destroy(), archive_pillpack_production_dialog()])
+        archive_button.grid(row=1, column=1, padx=50, sticky="ew")
 
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
@@ -216,7 +233,8 @@ class HomeScreen(Frame):
         archive_production_image = icons_dir + "\\archive.png"
         archive_production_button_image = PhotoImage(file=archive_production_image)
         self.archive_button_production_image = archive_production_button_image.subsample(5, 5)
-        archive_production_button = Button(options_frame, image=self.archive_button_production_image)
+        archive_production_button = Button(options_frame, image=self.archive_button_production_image,
+                                           command=lambda: self.confirm_production_archival())
         archive_production_label.grid(row=1, column=2, sticky="nsew")
         archive_production_button.grid(row=2, column=2, sticky="nsew")
 
@@ -502,6 +520,21 @@ class HomeScreen(Frame):
             continue_button.grid(row=1, column=1, padx=50, sticky="ew")
         else:
             self.open_scan_scripts_window()
+
+    def confirm_production_archival(self):
+        warning = Toplevel(master=self.master)
+        warning.geometry("500x500")
+        warning_label = Label(warning, text="Warning: Archiving this production will PERMENANTLY archive "
+                                            "all working data. This means you will not be able to make any more "
+                                            "modifications on the current production after archival. "
+                                            "Are you sure you wish to archive the current production? ",
+                              wraplength=300)
+        warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+        archive_button = Button(warning, text="OK",
+                                command=lambda: [warning.destroy(), archive_pillpack_production_dialog()])
+        archive_button.grid(row=1, column=0, padx=50, sticky="ew")
+        cancel_button = Button(warning, text="Cancel", command=warning.destroy)
+        cancel_button.grid(row=1, column=1, padx=50, sticky="ew")
 
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
@@ -1000,6 +1033,13 @@ def populate_pillpack_production_data(application: App):
                                          )
     )
     scriptScanner.save_collected_patients(application.collected_patients)
+
+
+def archive_pillpack_production_dialog():
+    archive_file = filedialog.asksaveasfile(initialfile="Untitled.zip", defaultextension=".zip",
+                                            filetypes=[("All files", ".*"), ("ZIP files", ".zip")])
+    print(archive_file)
+    pillpackData.archive_pillpack_production(archive_file)
 
 
 app = App()
