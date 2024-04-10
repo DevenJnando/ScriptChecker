@@ -180,6 +180,7 @@ class SideBar(Frame):
 class HomeScreen(Frame):
     def __init__(self, parent, master: App):
         Frame.__init__(self, parent)
+        self.loading_spinner: Canvas = Canvas()
         self.tab_variable = tkinter.DoubleVar(value=75.0)
         self.font = font.Font(family='Verdana', size=14, weight="normal")
         self.master: App = master
@@ -195,6 +196,7 @@ class HomeScreen(Frame):
         do_not_produce_path = icons_dir + "\\remove.png"
         do_not_produce_image = PhotoImage(file=do_not_produce_path)
         self.do_not_produce_image = do_not_produce_image.subsample(30, 30)
+        self.list_of_trees = []
 
         side_bar = SideBar(self, self.master)
         side_bar.pack(side="left", fill="both")
@@ -261,36 +263,9 @@ class HomeScreen(Frame):
                                                           'Condition'),
                                                  height=10)
         self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
-
-        self.production_patients_tree.heading('#0', text="Patient Name")
-        self.production_patients_tree.heading('Date of Birth', text="Date of Birth")
-        self.production_patients_tree.heading('No. of Medications', text="No. of Medications")
-        self.production_patients_tree.heading('Condition', text="Condition")
-        self.production_patients_tree.bind('<Double-1>',
-                                           lambda e: self.on_treeview_double_click
-                                           (self.production_patients_tree)
-                                           )
-        production_patients_filter_label = Label(production_patients_results, font=self.font, text="Filter results: ")
-        production_patients_filter_combobox = tkinter.ttk.Combobox(production_patients_results,
-                                                                   state="readonly",
-                                                                   font=self.font,
-                                                                   values=[consts.SHOW_ALL_RESULTS_STRING,
-                                                                           consts.READY_TO_PRODUCE_STRING,
-                                                                           consts.MISSING_MEDICATIONS_STRING,
-                                                                           consts.DO_NOT_PRODUCE_STRING,
-                                                                           consts.NOTHING_TO_COMPARE_STRING
-                                                                           ]
-                                                                   )
-        production_patients_filter_combobox.bind("<<ComboboxSelected>>",
-                                                 lambda e:
-                                                 self._on_filter_selected(
-                                                     production_patients_filter_combobox.get(),
-                                                     self.production_patients_tree,
-                                                     self.master.collected_patients.pillpack_patient_dict)
-                                                 )
-        production_patients_filter_label.grid(row=0, column=0)
-        production_patients_filter_combobox.grid(row=1, column=0)
-        self.production_patients_tree.grid(row=2, column=0, sticky="ew")
+        self.list_of_trees.append([self.production_patients_tree,
+                                   production_patients_results,
+                                   self.master.collected_patients.pillpack_patient_dict])
 
         perfect_match_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(perfect_match_patients, text="Perfectly Matched Patients")
@@ -303,36 +278,9 @@ class HomeScreen(Frame):
                                                        'Condition'),
                                               height=10)
         self.perfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
-
-        self.perfect_patients_tree.heading('#0', text="Patient Name")
-        self.perfect_patients_tree.heading('Date of Birth', text="Date of Birth")
-        self.perfect_patients_tree.heading('No. of Medications', text="No. of Medications")
-        self.perfect_patients_tree.heading('Condition', text="Condition")
-        self.perfect_patients_tree.bind('<Double-1>',
-                                        lambda e: self.on_treeview_double_click
-                                        (self.perfect_patients_tree)
-                                        )
-        perfect_patients_filter_label = Label(perfect_match_patients, font=self.font, text="Filter results: ")
-        perfect_patients_filter_combobox = tkinter.ttk.Combobox(perfect_match_patients,
-                                                                state="readonly",
-                                                                font=self.font,
-                                                                values=[consts.SHOW_ALL_RESULTS_STRING,
-                                                                        consts.READY_TO_PRODUCE_STRING,
-                                                                        consts.MISSING_MEDICATIONS_STRING,
-                                                                        consts.DO_NOT_PRODUCE_STRING,
-                                                                        consts.NOTHING_TO_COMPARE_STRING
-                                                                        ]
-                                                                )
-        perfect_patients_filter_combobox.bind("<<ComboboxSelected>>",
-                                              lambda e:
-                                              self._on_filter_selected(
-                                                  perfect_patients_filter_combobox.get(),
-                                                  self.perfect_patients_tree,
-                                                  self.master.collected_patients.matched_patients)
-                                              )
-        perfect_patients_filter_label.grid(row=0, column=0)
-        perfect_patients_filter_combobox.grid(row=1, column=0)
-        self.perfect_patients_tree.grid(row=2, column=0, sticky="ew")
+        self.list_of_trees.append([self.perfect_patients_tree,
+                                   perfect_match_patients,
+                                   self.master.collected_patients.matched_patients])
 
         minor_mismatch_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(minor_mismatch_patients, text="Minor Mismatched Patients")
@@ -345,36 +293,9 @@ class HomeScreen(Frame):
                                                          'Condition'),
                                                 height=10)
         self.imperfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
-
-        self.imperfect_patients_tree.heading('#0', text="Patient Name")
-        self.imperfect_patients_tree.heading('Date of Birth', text="Date of Birth")
-        self.imperfect_patients_tree.heading('No. of Medications', text="No. of Medications")
-        self.imperfect_patients_tree.heading('Condition', text="Condition")
-        self.imperfect_patients_tree.bind('<Double-1>',
-                                          lambda e: self.on_treeview_double_click
-                                          (self.imperfect_patients_tree)
-                                          )
-        imperfect_patients_filter_label = Label(minor_mismatch_patients, font=self.font, text="Filter results: ")
-        imperfect_patients_filter_combobox = tkinter.ttk.Combobox(minor_mismatch_patients,
-                                                                  state="readonly",
-                                                                  font=self.font,
-                                                                  values=[consts.SHOW_ALL_RESULTS_STRING,
-                                                                          consts.READY_TO_PRODUCE_STRING,
-                                                                          consts.MISSING_MEDICATIONS_STRING,
-                                                                          consts.DO_NOT_PRODUCE_STRING,
-                                                                          consts.NOTHING_TO_COMPARE_STRING
-                                                                          ]
-                                                                  )
-        imperfect_patients_filter_combobox.bind("<<ComboboxSelected>>",
-                                                lambda e:
-                                                self._on_filter_selected(
-                                                    imperfect_patients_filter_combobox.get(),
-                                                    self.imperfect_patients_tree,
-                                                    self.master.collected_patients.minor_mismatch_patients)
-                                                )
-        imperfect_patients_filter_label.grid(row=0, column=0)
-        imperfect_patients_filter_combobox.grid(row=1, column=0)
-        self.imperfect_patients_tree.grid(row=2, column=0, sticky="ew")
+        self.list_of_trees.append([self.imperfect_patients_tree,
+                                   minor_mismatch_patients,
+                                   self.master.collected_patients.minor_mismatch_patients])
 
         severe_mismatch_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(severe_mismatch_patients, text="Severely Mismatched Patients")
@@ -386,37 +307,38 @@ class HomeScreen(Frame):
                                                           'No. of Medications',
                                                           'Condition'),
                                                  height=10)
-        self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
 
-        self.mismatched_patients_tree.heading('#0', text="Patient Name")
-        self.mismatched_patients_tree.heading('Date of Birth', text="Date of Birth")
-        self.mismatched_patients_tree.heading('No. of Medications', text="No. of Medications")
-        self.mismatched_patients_tree.heading('Condition', text="Condition")
-        self.mismatched_patients_tree.bind('<Double-1>',
-                                           lambda e: self.on_treeview_double_click
-                                           (self.mismatched_patients_tree)
-                                           )
-        mismatched_patients_filter_label = Label(severe_mismatch_patients, font=self.font, text="Filter results: ")
-        mismatched_patients_filter_combobox = tkinter.ttk.Combobox(severe_mismatch_patients,
-                                                                   state="readonly",
-                                                                   font=self.font,
-                                                                   values=[consts.SHOW_ALL_RESULTS_STRING,
-                                                                           consts.READY_TO_PRODUCE_STRING,
-                                                                           consts.MISSING_MEDICATIONS_STRING,
-                                                                           consts.DO_NOT_PRODUCE_STRING,
-                                                                           consts.NOTHING_TO_COMPARE_STRING
-                                                                           ]
-                                                                   )
-        mismatched_patients_filter_combobox.bind("<<ComboboxSelected>>",
-                                                 lambda e:
-                                                 self._on_filter_selected(
-                                                     mismatched_patients_filter_combobox.get(),
-                                                     self.mismatched_patients_tree,
-                                                     self.master.collected_patients.severe_mismatch_patients)
-                                                 )
-        mismatched_patients_filter_label.grid(row=0, column=0)
-        mismatched_patients_filter_combobox.grid(row=1, column=0)
-        self.mismatched_patients_tree.grid(row=2, column=0, sticky="ew")
+        self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        self.list_of_trees.append([self.mismatched_patients_tree,
+                                   severe_mismatch_patients,
+                                   self.master.collected_patients.severe_mismatch_patients])
+
+        for tree_results_and_dict in self.list_of_trees:
+            tree: Treeview = tree_results_and_dict[0]
+            results_location = tree_results_and_dict[1]
+            associated_dict: dict = tree_results_and_dict[2]
+            tree.heading('#0', text="Patient Name")
+            tree.heading('Date of Birth', text="Date of Birth")
+            tree.heading('No. of Medications', text="No. of Medications")
+            tree.heading('Condition', text="Condition")
+            tree.bind('<Double-1>', lambda event, e=tree: self.on_treeview_double_click(e))
+            filter_label = Label(results_location, font=self.font, text="Filter results: ")
+            filter_combobox = tkinter.ttk.Combobox(results_location,
+                                                   state="readonly",
+                                                   font=self.font,
+                                                   values=[consts.SHOW_ALL_RESULTS_STRING,
+                                                           consts.READY_TO_PRODUCE_STRING,
+                                                           consts.MISSING_MEDICATIONS_STRING,
+                                                           consts.DO_NOT_PRODUCE_STRING,
+                                                           consts.NOTHING_TO_COMPARE_STRING
+                                                           ]
+                                                   )
+            filter_combobox.bind("<<ComboboxSelected>>",
+                                 lambda event, e=(filter_combobox, tree, associated_dict):
+                                 self._on_filter_selected(e[0].get(), e[1], e[2]))
+            filter_label.grid(row=0, column=0)
+            filter_combobox.grid(row=1, column=0)
+            tree.grid(row=2, column=0, sticky="ew")
 
         results_notebook.pack(expand=True, fill="both", padx=5, pady=5)
 
@@ -491,16 +413,10 @@ class HomeScreen(Frame):
 
     def update(self):
         self._refresh_patient_status()
-        self._refresh_treeview(self.production_patients_tree,
-                               self.master.collected_patients.pillpack_patient_dict)
-        self._refresh_treeview(self.perfect_patients_tree,
-                               self.master.collected_patients.matched_patients)
-
-        self._refresh_treeview(self.imperfect_patients_tree,
-                               self.master.collected_patients.minor_mismatch_patients)
-
-        self._refresh_treeview(self.mismatched_patients_tree,
-                               self.master.collected_patients.severe_mismatch_patients)
+        for tree_results_and_dict in self.list_of_trees:
+            tree: Treeview = tree_results_and_dict[0]
+            associated_dict: dict = tree_results_and_dict[2]
+            self._refresh_treeview(tree, associated_dict)
 
     def check_if_pillpack_data_is_loaded(self):
         if len(self.master.collected_patients.pillpack_patient_dict) == 0:
