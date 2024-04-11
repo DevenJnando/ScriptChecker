@@ -128,45 +128,12 @@ class SideBar(Frame):
                                            command=lambda: self.master.show_frame(consts.HOME_SCREEN))
         self.view_patients_button.grid(row=0, column=0, pady=10)
         self.scan_scripts_button = Button(self, text="Scan Scripts",
-                                          command=lambda: self.check_if_pillpack_data_is_loaded())
+                                          command=lambda: check_if_pillpack_data_is_loaded(self.master,
+                                                                                           self.open_scan_scripts_window))
         self.scan_scripts_button.grid(row=1, column=0, pady=50)
         self.archive_production_data_button = Button(self, text="Archive Production Data",
-                                                     command=lambda: self.confirm_production_archival())
+                                                     command=lambda: confirm_production_archival(self.master))
         self.archive_production_data_button.grid(row=2, column=0, pady=50)
-
-    def check_if_pillpack_data_is_loaded(self):
-        if len(self.master.collected_patients.pillpack_patient_dict) == 0:
-            warning = Toplevel(master=self.master)
-            warning.geometry("400x200")
-            warning_label = Label(warning, text="You have not loaded any pillpack production data! "
-                                                "It is highly recommended that you do this before "
-                                                "scanning in scripts.",
-                                  wraplength=200)
-            warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
-            go_back_button = Button(warning, text="Go back", command=warning.destroy)
-            go_back_button.grid(row=1, column=0, padx=50, sticky="ew")
-            continue_button = Button(warning, text="Continue anyway",
-                                     command=lambda: [warning.destroy(),
-                                                      self.open_scan_scripts_window()
-                                                      ])
-            continue_button.grid(row=1, column=1, padx=50, sticky="ew")
-        else:
-            self.open_scan_scripts_window()
-
-    def confirm_production_archival(self):
-        warning = Toplevel(master=self.master)
-        warning.geometry("500x500")
-        warning_label = Label(warning, text="Warning: Archiving this production will PERMENANTLY archive "
-                                            "all working data. This means you will not be able to make any more "
-                                            "modifications on the current production after archival. "
-                                            "Are you sure you wish to archive the current production? ",
-                              wraplength=300)
-        warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
-        cancel_button = Button(warning, text="Cancel", command=warning.destroy)
-        cancel_button.grid(row=1, column=0, padx=50, sticky="ew")
-        archive_button = Button(warning, text="OK",
-                                command=lambda: [warning.destroy(), archive_pillpack_production_dialog()])
-        archive_button.grid(row=1, column=1, padx=50, sticky="ew")
 
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
@@ -229,7 +196,8 @@ class HomeScreen(Frame):
         scan_scripts_button_image = PhotoImage(file=scan_scripts_image)
         self.scripts_button_image = scan_scripts_button_image.subsample(5, 5)
         scan_scripts_button = Button(options_frame, image=self.scripts_button_image,
-                                     command=lambda: self.check_if_pillpack_data_is_loaded())
+                                     command=lambda: check_if_pillpack_data_is_loaded(self.master,
+                                                                                      self.open_scan_scripts_window))
         scan_scripts_label.grid(row=1, column=1, sticky="nsew")
         scan_scripts_button.grid(row=2, column=1, sticky="nsew")
 
@@ -239,7 +207,7 @@ class HomeScreen(Frame):
         archive_production_button_image = PhotoImage(file=archive_production_image)
         self.archive_button_production_image = archive_production_button_image.subsample(5, 5)
         archive_production_button = Button(options_frame, image=self.archive_button_production_image,
-                                           command=lambda: self.confirm_production_archival())
+                                           command=lambda: confirm_production_archival(self.master))
         archive_production_label.grid(row=1, column=2, sticky="nsew")
         archive_production_button.grid(row=2, column=2, sticky="nsew")
 
@@ -460,40 +428,6 @@ class HomeScreen(Frame):
             tree: Treeview = tree_results_and_dict[0]
             associated_dict: dict = tree_results_and_dict[2]
             self._refresh_treeview(tree, associated_dict)
-
-    def check_if_pillpack_data_is_loaded(self):
-        if len(self.master.collected_patients.pillpack_patient_dict) == 0:
-            warning = Toplevel(master=self.master)
-            warning.geometry("400x200")
-            warning_label = Label(warning, text="You have not loaded any pillpack production data! "
-                                                "It is highly recommended that you do this before "
-                                                "scanning in scripts.",
-                                  wraplength=200)
-            warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
-            go_back_button = Button(warning, text="Go back", command=warning.destroy)
-            go_back_button.grid(row=1, column=0, padx=50, sticky="ew")
-            continue_button = Button(warning, text="Continue anyway",
-                                     command=lambda: [warning.destroy(),
-                                                      self.open_scan_scripts_window()
-                                                      ])
-            continue_button.grid(row=1, column=1, padx=50, sticky="ew")
-        else:
-            self.open_scan_scripts_window()
-
-    def confirm_production_archival(self):
-        warning = Toplevel(master=self.master)
-        warning.geometry("500x500")
-        warning_label = Label(warning, text="Warning: Archiving this production will PERMENANTLY archive "
-                                            "all working data. This means you will not be able to make any more "
-                                            "modifications on the current production after archival. "
-                                            "Are you sure you wish to archive the current production? ",
-                              wraplength=300)
-        warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
-        archive_button = Button(warning, text="OK",
-                                command=lambda: [warning.destroy(), archive_pillpack_production_dialog()])
-        archive_button.grid(row=1, column=0, padx=50, sticky="ew")
-        cancel_button = Button(warning, text="Cancel", command=warning.destroy)
-        cancel_button.grid(row=1, column=1, padx=50, sticky="ew")
 
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
@@ -910,18 +844,26 @@ class ScanScripts(Toplevel):
         self.patient_tree.pack(padx=20)
 
     def scan_scripts(self, application: App, script_input: str):
-        scriptScanner.scan_script_and_check_medications(application.collected_patients, script_input)
-        self.patient_tree.set('perfect_matches', 'No. of Patients',
-                              str(len(application.collected_patients.matched_patients)) + "/"
-                              + str(len(application.collected_patients.pillpack_patient_dict)))
-        self.__iterate_patients(application.collected_patients.matched_patients.values(), 'perfect_matches')
-        self.patient_tree.set('minor_mismatches', 'No. of Patients',
-                              len(application.collected_patients.minor_mismatch_patients))
-        self.__iterate_patients(application.collected_patients.minor_mismatch_patients, 'minor_mismatches')
-        self.patient_tree.set('severe_mismatches', 'No. of Patients',
-                              len(application.collected_patients.severe_mismatch_patients))
-        self.__iterate_patients(application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
-
+        if scriptScanner.scan_script_and_check_medications(application.collected_patients, script_input):
+            self.patient_tree.set('perfect_matches', 'No. of Patients',
+                                  str(len(application.collected_patients.matched_patients)) + "/"
+                                  + str(len(application.collected_patients.pillpack_patient_dict)))
+            self.__iterate_patients(application.collected_patients.matched_patients.values(), 'perfect_matches')
+            self.patient_tree.set('minor_mismatches', 'No. of Patients',
+                                  len(application.collected_patients.minor_mismatch_patients))
+            self.__iterate_patients(application.collected_patients.minor_mismatch_patients, 'minor_mismatches')
+            self.patient_tree.set('severe_mismatches', 'No. of Patients',
+                                  len(application.collected_patients.severe_mismatch_patients))
+            self.__iterate_patients(application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
+        else:
+            warning = Toplevel(master=self.master)
+            warning.geometry("400x200")
+            warning_label = Label(warning, text="Failed to interpret script XML...",
+                                  wraplength=300)
+            warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+            ok_button = Button(warning, text="OK", command=warning.destroy)
+            ok_button.grid(row=1, column=0, padx=50, sticky="ew", columnspan=2)
+            warning.grab_set()
         self.entry.delete(0, tkinter.END)
         self.entry.focus()
 
@@ -968,6 +910,42 @@ class ScanScripts(Toplevel):
                         if patient.first_name.lower() == first_name.lower():
                             self.main_application.show_frame(consts.VIEW_PATIENT_SCREEN, patient)
                             self.parent.focus()
+
+
+def check_if_pillpack_data_is_loaded(application: App, function):
+    if len(application.collected_patients.pillpack_patient_dict) == 0:
+        warning = Toplevel(master=application)
+        warning.geometry("400x200")
+        warning_label = Label(warning, text="You have not loaded any pillpack production data! "
+                                            "It is highly recommended that you do this before "
+                                            "scanning in scripts.",
+                              wraplength=200)
+        warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+        go_back_button = Button(warning, text="Go back", command=warning.destroy)
+        go_back_button.grid(row=1, column=0, padx=50, sticky="ew")
+        continue_button = Button(warning, text="Continue anyway",
+                                 command=lambda: [warning.destroy(),
+                                                  function()
+                                                  ])
+        continue_button.grid(row=1, column=1, padx=50, sticky="ew")
+    else:
+        function()
+
+
+def confirm_production_archival(application: App):
+    warning = Toplevel(master=application)
+    warning.geometry("400x200")
+    warning_label = Label(warning, text="Warning: Archiving this production will PERMENANTLY archive "
+                                        "all working data. This means you will not be able to make any more "
+                                        "modifications on the current production after archival. "
+                                        "Are you sure you wish to archive the current production? ",
+                          wraplength=300)
+    warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+    archive_button = Button(warning, text="OK",
+                            command=lambda: [warning.destroy(), archive_pillpack_production_dialog()])
+    archive_button.grid(row=1, column=0, padx=50, sticky="ew")
+    cancel_button = Button(warning, text="Cancel", command=warning.destroy)
+    cancel_button.grid(row=1, column=1, padx=50, sticky="ew")
 
 
 def match_patient_to_pillpack_patient(patient_to_be_matched: scriptScanner.PillpackPatient, pillpack_patient_dict: dict):

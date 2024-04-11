@@ -241,8 +241,10 @@ def scan_script_and_check_medications(collected_patients: CollectedPatients, sca
         if not extend_existing_patient_medication_dict(script_patient_object, collected_patients):
             check_if_patient_is_in_pillpack_production(collected_patients.pillpack_patient_dict, script_patient_object, collected_patients)
         save_collected_patients(collected_patients)
+        return True
     else:
         print("Failed to read patient data from script...")
+        return False
 
 
 def update_current_prns_and_ignored_medications(patient: pillpackData.PillpackPatient,
