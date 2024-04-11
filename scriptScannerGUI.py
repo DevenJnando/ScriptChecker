@@ -808,6 +808,7 @@ class ScanScripts(Toplevel):
         self.severe_mismatched_patients = None
         self.main_application: App = master
         self.parent = parent
+        self.reduced_patients = []
         self.geometry("400x300")
         self.label = Label(self, text="Scan scripts below: ")
         self.label.pack(padx=20, pady=20)
@@ -818,9 +819,9 @@ class ScanScripts(Toplevel):
 
         all_patients: list = list(self.main_application.collected_patients.pillpack_patient_dict.values())
         if len(all_patients) > 0:
-            reduced_patients: list = reduce(list.__add__, all_patients)
+            self.reduced_patients: list = reduce(list.__add__, all_patients)
         else:
-            reduced_patients: list = []
+            self.reduced_patients: list = []
 
         self.patient_tree = Treeview(self, columns=('No. of Patients',), height=3)
         self.patient_tree.heading('No. of Patients', text="No. of Patients")
@@ -835,7 +836,7 @@ class ScanScripts(Toplevel):
         self.patient_tree.tag_configure('severe', background='#a30202')
         self.patient_tree.set('perfect_matches', 'No. of Patients',
                               str(len(self.main_application.collected_patients.matched_patients)) + "/"
-                              + str(len(reduced_patients)))
+                              + str(len(self.reduced_patients)))
         self.patient_tree.set('minor_mismatches', 'No. of Patients',
                               len(self.main_application.collected_patients.minor_mismatch_patients))
         self.patient_tree.set('severe_mismatches', 'No. of Patients',
@@ -846,8 +847,8 @@ class ScanScripts(Toplevel):
     def scan_scripts(self, application: App, script_input: str):
         if scriptScanner.scan_script_and_check_medications(application.collected_patients, script_input):
             self.patient_tree.set('perfect_matches', 'No. of Patients',
-                                  str(len(application.collected_patients.matched_patients)) + "/"
-                                  + str(len(application.collected_patients.pillpack_patient_dict)))
+                                  str(len(self.main_application.collected_patients.matched_patients)) + "/"
+                                  + str(len(self.reduced_patients)))
             self.__iterate_patients(application.collected_patients.matched_patients.values(), 'perfect_matches')
             self.patient_tree.set('minor_mismatches', 'No. of Patients',
                                   len(application.collected_patients.minor_mismatch_patients))
