@@ -1,5 +1,7 @@
 import datetime
+import queue
 import sys
+import threading
 import tkinter
 import types
 import typing
@@ -180,12 +182,15 @@ class SideBar(Frame):
 class HomeScreen(Frame):
     def __init__(self, parent, master: App):
         Frame.__init__(self, parent)
-        self.loading_spinner: Canvas = Canvas()
         self.tab_variable = tkinter.DoubleVar(value=75.0)
         self.font = font.Font(family='Verdana', size=14, weight="normal")
         self.master: App = master
         warning_image_path = icons_dir + "\\warning.png"
         warning_image = PhotoImage(file=warning_image_path)
+        self.loading_message_thread: threading.Thread = threading.Thread(target=self.execute_loading_message)
+        self.get_production_thread = threading.Thread(target=self.threaded_get_production_data)
+        self.delete_loading_message_thread = threading.Thread(target=self.delete_loading_message)
+        self.update_thread = threading.Thread(target=self.threaded_update)
         self.warning_image = warning_image.subsample(30, 30)
         ready_to_produce_path = icons_dir + "\\check.png"
         ready_to_produce = PhotoImage(file=ready_to_produce_path)
@@ -215,9 +220,7 @@ class HomeScreen(Frame):
         load_pillpack_button_image = PhotoImage(file=load_pillpack_image)
         self.pillpack_button_image = load_pillpack_button_image.subsample(5, 5)
         load_pillpack_button = Button(options_frame, image=self.pillpack_button_image,
-                                      command=lambda: [populate_pillpack_production_data(self.master),
-                                                       self.update()
-                                                       ])
+                                      command=lambda: self.threaded_production_data_retrieval())
         load_pillpack_label.grid(row=1, column=0, sticky="nsew")
         load_pillpack_button.grid(row=2, column=0, sticky="nsew")
 
@@ -344,6 +347,46 @@ class HomeScreen(Frame):
 
         self.update()
         self.script_window = None
+
+    def threaded_production_data_retrieval(self):
+        self.loading_message_thread: threading.Thread = threading.Thread(target=self.execute_loading_message)
+        self.get_production_thread = threading.Thread(target=self.threaded_get_production_data)
+        self.delete_loading_message_thread = threading.Thread(target=self.delete_loading_message)
+        self.update_thread = threading.Thread(target=self.threaded_update)
+        for thread in [self.loading_message_thread, self.get_production_thread,
+                       self.delete_loading_message_thread, self.update_thread]:
+            thread.daemon = True
+            thread.start()
+
+    def threaded_get_production_data(self):
+        self.loading_message_thread.join()
+        populate_pillpack_production_data(self.master)
+        return
+
+    def execute_loading_message(self):
+        for trees_results_and_dicts in self.list_of_trees:
+            tree: Treeview = trees_results_and_dicts[0]
+            key = "loading"
+            tree.delete(*tree.get_children())
+            tree.insert('', 'end', key, text=key)
+            tree.set(key, 'First Name', "Loading...")
+            tree.set(key, 'Last Name', "Loading...")
+            tree.set(key, 'Date of Birth', "Loading...")
+            tree.set(key, 'No. of Medications', "Loading...")
+            tree.set(key, 'Condition', "Loading...")
+
+    def delete_loading_message(self):
+        self.get_production_thread.join()
+        for trees_results_and_dicts in self.list_of_trees:
+            tree: Treeview = trees_results_and_dicts[0]
+            key = "loading"
+            tree.delete(key)
+        return
+
+    def threaded_update(self):
+        self.delete_loading_message_thread.join()
+        self.update()
+        return
 
     def _refresh_patient_status(self):
         for patient_list in self.master.collected_patients.pillpack_patient_dict.values():
