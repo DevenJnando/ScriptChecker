@@ -1,5 +1,4 @@
 import datetime
-import queue
 import sys
 import threading
 import tkinter
@@ -11,7 +10,7 @@ from tkinter import *
 from tkinter import font
 from tkinter import filedialog
 
-import pillpackData
+from pillpackData import PillpackPatient, Medication, archive_pillpack_production
 import scriptScanner
 
 consts = types.SimpleNamespace()
@@ -103,7 +102,7 @@ class App(tkinter.Tk):
 
         # set_appearance_mode("dark")
 
-    def show_frame(self, view_name: str, patient_to_view: pillpackData.PillpackPatient = None):
+    def show_frame(self, view_name: str, patient_to_view: PillpackPatient = None):
         match view_name:
             case consts.HOME_SCREEN:
                 frame: HomeScreen = HomeScreen(parent=self.container, master=self)
@@ -111,7 +110,7 @@ class App(tkinter.Tk):
                 frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
                 frame.tkraise()
             case consts.VIEW_PATIENT_SCREEN:
-                if isinstance(patient_to_view, pillpackData.PillpackPatient):
+                if isinstance(patient_to_view, PillpackPatient):
                     frame: Frame = PatientMedicationDetails(parent=self.container, master=self, patient=patient_to_view)
                     self.app_observer.connect(frame)
                     frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
@@ -219,14 +218,14 @@ class HomeScreen(Frame):
 
         results_notebook = tkinter.ttk.Notebook(paned_frame)
 
-        production_patients_results = tkinter.ttk.Frame(results_notebook)
-        production_patients_results.columnconfigure(index=0, weight=1)
-        production_patients_results.columnconfigure(index=1, weight=1)
-        production_patients_results.rowconfigure(index=0, weight=1)
-        production_patients_results.rowconfigure(index=1, weight=1)
-        results_notebook.add(production_patients_results, text="Patients in Pillpack Production")
+        self.production_patients_results = tkinter.ttk.Frame(results_notebook)
+        self.production_patients_results.columnconfigure(index=0, weight=1)
+        self.production_patients_results.columnconfigure(index=1, weight=1)
+        self.production_patients_results.rowconfigure(index=0, weight=1)
+        self.production_patients_results.rowconfigure(index=1, weight=1)
+        results_notebook.add(self.production_patients_results, text="Patients in Pillpack Production")
 
-        self.production_patients_tree = Treeview(production_patients_results,
+        self.production_patients_tree = Treeview(self.production_patients_results,
                                                  columns=('First Name',
                                                           'Last Name',
                                                           'Date of Birth',
@@ -235,13 +234,13 @@ class HomeScreen(Frame):
                                                  height=10)
         self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.list_of_trees.append([self.production_patients_tree,
-                                   production_patients_results,
+                                   self.production_patients_results,
                                    self.master.collected_patients.pillpack_patient_dict])
 
-        perfect_match_patients = tkinter.ttk.Frame(results_notebook)
-        results_notebook.add(perfect_match_patients, text="Perfectly Matched Patients")
+        self.perfect_match_patients = tkinter.ttk.Frame(results_notebook)
+        results_notebook.add(self.perfect_match_patients, text="Perfectly Matched Patients")
 
-        self.perfect_patients_tree = Treeview(perfect_match_patients,
+        self.perfect_patients_tree = Treeview(self.perfect_match_patients,
                                               columns=('First Name',
                                                        'Last Name',
                                                        'Date of Birth',
@@ -250,13 +249,13 @@ class HomeScreen(Frame):
                                               height=10)
         self.perfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.list_of_trees.append([self.perfect_patients_tree,
-                                   perfect_match_patients,
+                                   self.perfect_match_patients,
                                    self.master.collected_patients.matched_patients])
 
-        minor_mismatch_patients = tkinter.ttk.Frame(results_notebook)
-        results_notebook.add(minor_mismatch_patients, text="Minor Mismatched Patients")
+        self.minor_mismatch_patients = tkinter.ttk.Frame(results_notebook)
+        results_notebook.add(self.minor_mismatch_patients, text="Minor Mismatched Patients")
 
-        self.imperfect_patients_tree = Treeview(minor_mismatch_patients,
+        self.imperfect_patients_tree = Treeview(self.minor_mismatch_patients,
                                                 columns=('First Name',
                                                          'Last Name',
                                                          'Date of Birth',
@@ -265,13 +264,13 @@ class HomeScreen(Frame):
                                                 height=10)
         self.imperfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.list_of_trees.append([self.imperfect_patients_tree,
-                                   minor_mismatch_patients,
+                                   self.minor_mismatch_patients,
                                    self.master.collected_patients.minor_mismatch_patients])
 
-        severe_mismatch_patients = tkinter.ttk.Frame(results_notebook)
-        results_notebook.add(severe_mismatch_patients, text="Severely Mismatched Patients")
+        self.severe_mismatch_patients = tkinter.ttk.Frame(results_notebook)
+        results_notebook.add(self.severe_mismatch_patients, text="Severely Mismatched Patients")
 
-        self.mismatched_patients_tree = Treeview(severe_mismatch_patients,
+        self.mismatched_patients_tree = Treeview(self.severe_mismatch_patients,
                                                  columns=('First Name',
                                                           'Last Name',
                                                           'Date of Birth',
@@ -281,7 +280,7 @@ class HomeScreen(Frame):
 
         self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.list_of_trees.append([self.mismatched_patients_tree,
-                                   severe_mismatch_patients,
+                                   self.severe_mismatch_patients,
                                    self.master.collected_patients.severe_mismatch_patients])
 
         for tree_results_and_dict in self.list_of_trees:
@@ -356,11 +355,25 @@ class HomeScreen(Frame):
         self.update()
         return
 
+    def _update_list_of_trees(self):
+        self.list_of_trees[0] = ([self.production_patients_tree,
+                                  self.production_patients_results,
+                                  self.master.collected_patients.pillpack_patient_dict])
+        self.list_of_trees[1] = ([self.perfect_patients_tree,
+                                  self.perfect_match_patients,
+                                  self.master.collected_patients.matched_patients])
+        self.list_of_trees[2] = ([self.imperfect_patients_tree,
+                                  self.minor_mismatch_patients,
+                                  self.master.collected_patients.minor_mismatch_patients])
+        self.list_of_trees[3] = ([self.mismatched_patients_tree,
+                                  self.severe_mismatch_patients,
+                                  self.master.collected_patients.severe_mismatch_patients])
+
     def _refresh_patient_status(self):
         for patient_list in self.master.collected_patients.pillpack_patient_dict.values():
             if isinstance(patient_list, list):
                 for patient in patient_list:
-                    if isinstance(patient, scriptScanner.PillpackPatient):
+                    if isinstance(patient, PillpackPatient):
                         patient.determine_ready_to_produce_code()
 
     def _refresh_treeview(self, tree_to_refresh: tkinter.ttk.Treeview, dictionary: dict):
@@ -368,8 +381,8 @@ class HomeScreen(Frame):
         for patient_list in iterator:
             if isinstance(patient_list, list):
                 for patient in patient_list:
-                    if isinstance(patient, scriptScanner.PillpackPatient):
-                        matching_pillpack_patient: scriptScanner.PillpackPatient = (
+                    if isinstance(patient, PillpackPatient):
+                        matching_pillpack_patient: PillpackPatient = (
                             match_patient_to_pillpack_patient
                             (patient, self.master.collected_patients.pillpack_patient_dict)
                         )
@@ -410,8 +423,8 @@ class HomeScreen(Frame):
             for patient_list in iterator:
                 if isinstance(patient_list, list):
                     for patient in patient_list:
-                        if isinstance(patient, scriptScanner.PillpackPatient):
-                            matching_pillpack_patient: scriptScanner.PillpackPatient = (
+                        if isinstance(patient, PillpackPatient):
+                            matching_pillpack_patient: PillpackPatient = (
                                 match_patient_to_pillpack_patient
                                 (patient, self.master.collected_patients.pillpack_patient_dict)
                             )
@@ -423,6 +436,7 @@ class HomeScreen(Frame):
             self._refresh_treeview(tree_to_filter, dictionary_to_reference)
 
     def update(self):
+        self._update_list_of_trees()
         self._refresh_patient_status()
         for tree_results_and_dict in self.list_of_trees:
             tree: Treeview = tree_results_and_dict[0]
@@ -475,9 +489,12 @@ class HomeScreen(Frame):
 
 
 class PatientMedicationDetails(Frame):
-    def __init__(self, parent, master: App, patient: pillpackData.PillpackPatient):
+    def __init__(self, parent, master: App, patient: PillpackPatient):
         Frame.__init__(self, parent)
+        self.link_medication_window = None
+        self.unlink_medication_window = None
         self.change_toggle_button_image = None
+        self.linked_medication_image = None
         self.do_not_produce_image = None
         self.missing_scripts_image = None
         self.no_scripts_scanned_image = None
@@ -487,7 +504,7 @@ class PatientMedicationDetails(Frame):
         self.master: App = master
         side_bar = SideBar(self, self.master)
         side_bar.pack(side="left", fill="both")
-        self.patient_object: pillpackData.PillpackPatient = patient
+        self.patient_object: PillpackPatient = patient
         self.patient_tree_key = self.patient_object.first_name + " " + self.patient_object.last_name
 
         container_frame = tkinter.ttk.Frame(self)
@@ -604,8 +621,7 @@ class PatientMedicationDetails(Frame):
                              row_number: int, dictionary_to_iterate: dict,
                              include_prn_medications_button: bool = False,
                              include_delete_prn_medications_button: bool = False,
-                             include_ignore_medications_button: bool = False,
-                             include_remove_from_ignore_button: bool = False
+                             create_medication_link_button: bool = False
                              ):
         dictionary_values: list = list(dictionary_to_iterate.values())
         if len(dictionary_values) > 0:
@@ -618,11 +634,23 @@ class PatientMedicationDetails(Frame):
             medication_dosage_label.grid(row=0, column=1)
         for i in range(0, len(dictionary_values)):
             medication = dictionary_values[i]
-            if isinstance(medication, pillpackData.Medication):
-                medication_name_label = Label(label_frame_to_populate, text=medication.medication_name)
+            if isinstance(medication, Medication):
+                medication_name_label = Label(label_frame_to_populate, text=medication.medication_name,
+                                              wraplength=200)
                 medication_dosage_label = Label(label_frame_to_populate, text=medication.dosage)
                 medication_name_label.grid(row=i + 1, column=0)
                 medication_dosage_label.grid(row=i + 1, column=1)
+                if self.patient_object.linked_medications.__contains__(medication.medication_name):
+                    linked_medication: Medication = self.patient_object.linked_medications[medication.medication_name]
+                    link_icon_path = icons_dir + "\\link.png"
+                    link_icon_image = PhotoImage(file=link_icon_path)
+                    self.linked_medication_image = link_icon_image.subsample(20, 20)
+                    link_icon_label = Label(label_frame_to_populate, image=self.linked_medication_image)
+                    link_icon_label.grid(row=i+1, column=2)
+                    unlink_button = Button(label_frame_to_populate, text="Unlink",
+                                           command=lambda: self.open_unlink_medication_view(medication.medication_name))
+                    unlink_button.grid(row=i+1, column=3)
+                    create_tool_tip(link_icon_label, text=linked_medication.medication_name)
                 if include_prn_medications_button:
                     make_prn_medication_button = Button(label_frame_to_populate, text="Set as PRN",
                                                         command=lambda e=medication:
@@ -635,24 +663,16 @@ class PatientMedicationDetails(Frame):
                     delete_prn_medication_button = Button(label_frame_to_populate, text="Remove from PRN list",
                                                           command=lambda e=medication: self.remove_prn_medication(e))
                     delete_prn_medication_button.grid(row=i + 1, column=5)
-                if include_ignore_medications_button:
-                    ignore_medication_button = Button(label_frame_to_populate, text="Ignore",
+                if create_medication_link_button:
+                    ignore_medication_button = Button(label_frame_to_populate, text="Link Medication",
                                                       command=lambda e=medication:
-                                                      self.add_medication_to_ignore_dict(e,
-                                                                                         dictionary_to_iterate
-                                                                                         )
-                                                        )
+                                                      self.open_link_medication_view(e)
+                                                      )
                     ignore_medication_button.grid(row=i + 1, column=7)
-                if include_remove_from_ignore_button:
-                    remove_from_ignore_button = Button(label_frame_to_populate, text="Remove from ignore list",
-                                                       command=lambda e=medication:
-                                                       self.remove_medication_from_ignore_dict(e))
-                    remove_from_ignore_button.grid(row=i + 1, column=9)
 
     def populate_incorrect_dosages_label_frame(self,
                                                incorrect_medication_dosage_frame,
-                                               row_number: int,
-                                               include_ignore_medications_button: bool = False
+                                               row_number: int
                                                ):
         incorrect_dosages_values = list(self.patient_object.incorrect_dosages_dict.values())
         if len(incorrect_dosages_values) > 0:
@@ -672,9 +692,9 @@ class PatientMedicationDetails(Frame):
             incorrect_medication_dosage_on_script_label.grid(row=0, column=2)
         for i in range(0, len(incorrect_dosages_values)):
             medication = incorrect_dosages_values[i]
-            if isinstance(medication, pillpackData.Medication):
+            if isinstance(medication, Medication):
                 if self.patient_object.medication_dict.__contains__(medication.medication_name):
-                    medication_in_production: pillpackData.Medication = self.patient_object.medication_dict.get(
+                    medication_in_production: Medication = self.patient_object.medication_dict.get(
                         medication.medication_name
                     )
                     medication_name_label = Label(incorrect_medication_dosage_frame, text=medication.medication_name)
@@ -685,56 +705,67 @@ class PatientMedicationDetails(Frame):
                     medication_name_label.grid(row=i + 1, column=0)
                     medication_dosage_in_production_label.grid(row=i + 1, column=1)
                     medication_dosage_on_script_label.grid(row=i + 1, column=2)
-                    if include_ignore_medications_button:
-                        ignore_medication_button = Button(self.incorrect_medication_dosage_frame, text="Ignore",
-                                                          command=lambda e=medication:
-                                                          self.add_medication_to_ignore_dict
-                                                          (e, self.patient_object.medication_dict)
-                                                          )
-                        ignore_medication_button.grid(row=i + 1, column=3)
 
     @staticmethod
     def clear_label_frame(frame_to_clear: LabelFrame):
         for widget in frame_to_clear.winfo_children():
             widget.destroy()
 
-    def set_medication_as_prn(self, selected_medication: scriptScanner.Medication, medication_dict: dict):
+    def open_link_medication_view(self, selected_medication: Medication):
+        if self.link_medication_window is None or not self.link_medication_window.winfo_exists():
+            self.link_medication_window = LinkMedication(self, self.patient_object, selected_medication, self.master)
+            self.link_medication_window.grab_set()
+        else:
+            self.link_medication_window.focus()
+
+    def open_unlink_medication_view(self, medication_key: str):
+        if self.unlink_medication_window is None or not self.link_medication_window.winfo_exists():
+            self.unlink_medication_window = UnlinkMedication(self, self.patient_object, medication_key, self.master)
+            self.unlink_medication_window.grab_set()
+        else:
+            self.unlink_medication_window.focus()
+
+    def set_medication_as_prn(self, selected_medication: Medication, medication_dict: dict):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
         self.patient_object.add_prn_medication_to_dict(selected_medication)
+        scriptScanner.save_collected_patients(self.master.collected_patients)
         scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
                                                                   self.master.collected_patients,
                                                                   self.master.loaded_prns_and_ignored_medications)
         self.master.app_observer.update(self)
 
-    def remove_prn_medication(self, selected_medication: scriptScanner.Medication):
+    def remove_prn_medication(self, selected_medication: Medication):
         if self.patient_object.prn_medications_dict.__contains__(selected_medication.medication_name):
             self.patient_object.remove_prn_medication_from_dict(selected_medication)
             if self.patient_object.medication_dict.__contains__(selected_medication.medication_name):
                 self.patient_object.add_missing_medication_to_dict(selected_medication)
             else:
                 self.patient_object.add_unknown_medication_to_dict(selected_medication)
+            scriptScanner.save_collected_patients(self.master.collected_patients)
             scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
                                                                       self.master.collected_patients,
                                                                       self.master.loaded_prns_and_ignored_medications)
             self.master.app_observer.update(self)
 
-    def add_medication_to_ignore_dict(self, selected_medication: scriptScanner.Medication, medication_dict: dict):
+    def add_medication_to_ignore_dict(self, selected_medication: Medication, medication_dict: dict):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
         self.patient_object.add_medication_to_ignore_dict(selected_medication)
+        scriptScanner.save_collected_patients(self.master.collected_patients)
         scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
                                                                   self.master.collected_patients,
                                                                   self.master.loaded_prns_and_ignored_medications)
         self.master.app_observer.update(self)
 
-    def remove_medication_from_ignore_dict(self, selected_medication: scriptScanner.Medication):
+    def remove_medication_from_ignore_dict(self, selected_medication: Medication):
         if self.patient_object.medications_to_ignore.__contains__(selected_medication.medication_name):
             self.patient_object.remove_medication_from_ignore_dict(selected_medication)
             if self.patient_object.medication_dict.__contains__(selected_medication.medication_name):
                 self.patient_object.add_missing_medication_to_dict(selected_medication)
             else:
                 self.patient_object.add_unknown_medication_to_dict(selected_medication)
+            scriptScanner.save_collected_patients(self.master.collected_patients)
             scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
                                                                       self.master.collected_patients,
                                                                       self.master.loaded_prns_and_ignored_medications)
@@ -771,26 +802,167 @@ class PatientMedicationDetails(Frame):
                                   7,
                                   self.patient_object.missing_medications_dict,
                                   True, False,
-                                  True, False
                                   )
         self.populate_label_frame(self.unknown_medication_frame,
                                   "Unknown Medications",
                                   9,
                                   self.patient_object.unknown_medications_dict,
                                   True, False,
-                                  True, False
+                                  True
                                   )
-        self.populate_label_frame(self.ignore_medications_frame,
-                                  "Medications to Ignore",
-                                  11,
-                                  self.patient_object.medications_to_ignore,
-                                  False, False,
-                                  False, True)
         self.populate_incorrect_dosages_label_frame(self.incorrect_medication_dosage_frame,
-                                                    13,
-                                                    True)
+                                                    11)
         self.display_canvas.update_idletasks()
         self.display_canvas.config(scrollregion=self.display_frame.bbox())
+
+
+class LinkMedication(Toplevel):
+    def __init__(self, parent, patient: PillpackPatient,
+                 medication: Medication, master: App):
+        super().__init__(parent)
+        self.missing_medications_tree = Treeview(self,
+                                                 columns='Dosage',
+                                                 height=10)
+        self.missing_medications_tree.heading('#0', text="Medication Name")
+        self.missing_medications_tree.heading('Dosage', text="Dosage")
+        self.geometry("1000x500")
+        self.selectable_medications: list = []
+        self.selected_patient: PillpackPatient = patient
+        self.linking_medication: Medication = medication
+        self.application: App = master
+        self.parent = parent
+        self.linkage_label = Label(self,
+                                   text="Select which medication you wish to link to " +
+                                        self.linking_medication.medication_name,
+                                   wraplength=200)
+        self.determine_selectable_medications()
+        self.create_selectable_medications_tree()
+        self.missing_medications_tree.bind('<Double-1>',
+                                           lambda e: self.confirm_linkage(self.missing_medications_tree.focus())
+                                           )
+        self.linkage_label.pack(side="top", fill="both", pady=20, padx=20)
+        self.missing_medications_tree.pack(side="top", fill="both", pady=20, padx=20)
+
+    def determine_selectable_medications(self):
+        for medication in self.selected_patient.missing_medications_dict.keys():
+            medication_object: Medication = self.selected_patient.missing_medications_dict[medication]
+            if medication_object.dosage == self.linking_medication.dosage:
+                self.selectable_medications.append(medication_object)
+
+    def create_selectable_medications_tree(self):
+        for medication in self.selectable_medications:
+            self.missing_medications_tree.insert('', 'end', medication.medication_name,
+                                                 text=medication.medication_name)
+            self.missing_medications_tree.set(medication.medication_name, "Dosage", medication.dosage)
+
+    def confirm_linkage(self, selected_medication: str):
+        for medication in self.selectable_medications:
+            if medication.medication_name == selected_medication:
+                selected_medication_object: Medication = medication
+                confirmation_box = Toplevel(self)
+                confirmation_box.geometry("600x400")
+                confirmation_label = Label(confirmation_box, text="You are about to link "
+                                                                  + self.linking_medication.medication_name
+                                                                  + " to "
+                                                                  + selected_medication
+                                                                  + ". \n"
+                                                                  + "This means that for this patient, "
+                                                                  + self.linking_medication.medication_name
+                                                                  + " will be considered the same medication as "
+                                                                  + selected_medication
+                                                                  + ". \n"
+                                                                  + "Do you wish to continue?",
+                                           wraplength=300)
+                confirmation_button = Button(confirmation_box, text="OK",
+                                             command=lambda: [self.link_medication(selected_medication_object),
+                                                              self.parent.update(),
+                                                              confirmation_box.destroy(),
+                                                              self.destroy()]
+                                             )
+                cancel_button = Button(confirmation_box, text="Cancel",
+                                       command=lambda: [confirmation_box.destroy(),
+                                                        self.destroy()])
+                confirmation_label.grid(row=0, column=0, pady=25, sticky="ew")
+                confirmation_button.grid(row=1, column=0, padx=50, sticky="ew")
+                cancel_button.grid(row=1, column=1, padx=50, sticky="ew")
+                break
+
+    def link_medication(self, selected_medication: Medication):
+        self.selected_patient.add_medication_link(self.linking_medication, selected_medication)
+        scriptScanner.save_collected_patients(self.application.collected_patients)
+        scriptScanner.update_current_prns_and_ignored_medications(self.selected_patient,
+                                                                  self.application.collected_patients,
+                                                                  self.application.loaded_prns_and_ignored_medications)
+        self.application.app_observer.update(self.parent)
+
+
+class UnlinkMedication(Toplevel):
+    def __init__(self, parent, patient: PillpackPatient,
+                 medication_key: str, master: App):
+        super().__init__(parent)
+        self.selected_patient: PillpackPatient = patient
+        self.medication_key_to_be_unlinked: str = medication_key
+        if self.selected_patient.linked_medications[medication_key] is not None:
+            self.medication_to_be_unlinked: Medication = self.selected_patient.linked_medications[medication_key]
+        else:
+            self.medication_to_be_unlinked: Medication = Medication("Invalid Medication", 0)
+        print(self.medication_to_be_unlinked.medication_name)
+        self.application: App = master
+        self.parent = parent
+        self.geometry("600x400")
+        self.confirmation_label = Label(self,
+                                        text="Are you sure you wish to unlink "
+                                             + self.medication_key_to_be_unlinked + " from "
+                                             + self.medication_to_be_unlinked.medication_name + " ?",
+                                        wraplength=200)
+        self.confirmation_button = Button(self, text="OK", command=lambda: [self.unlink_medication(),
+                                                                            self.parent.update(),
+                                                                            self.destroy()])
+        self.cancel_button = Button(self, text="Cancel", command=self.destroy)
+        self.confirmation_label.grid(row=0, column=0, sticky="ew")
+        self.confirmation_button.grid(row=1, column=0, sticky="ew")
+        self.cancel_button.grid(row=1, column=1, sticky="ew")
+
+    def unlink_medication(self):
+        if self.selected_patient.matched_medications_dict.__contains__(self.medication_key_to_be_unlinked):
+            medication_in_key: Medication = self.selected_patient.matched_medications_dict[self.medication_key_to_be_unlinked]
+            self.selected_patient.remove_medication_link(medication_in_key)
+            scriptScanner.save_collected_patients(self.application.collected_patients)
+            scriptScanner.update_current_prns_and_ignored_medications(self.selected_patient,
+                                                                      self.application.collected_patients,
+                                                                      self.application.loaded_prns_and_ignored_medications)
+            self.application.app_observer.update(self.parent)
+
+
+class ToolTip(object):
+
+    def __init__(self, widget):
+        self.widget = widget
+        self.tip_window = None
+        self.text = None
+        self.id = None
+        self.x = self.y = 0
+
+    def showtip(self, text):
+        self.text = text
+        if self.tip_window or not self.text:
+            return
+        x, y, cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 57
+        y = y + cy + self.widget.winfo_rooty() + 27
+        self.tip_window = tw = Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        label = Label(tw, text=self.text, justify=LEFT,
+                      background="#ffffe0", foreground="#000000", relief=SOLID, borderwidth=1,
+                      font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        tw = self.tip_window
+        self.tip_window = None
+        if tw:
+            tw.destroy()
 
 
 class ScanScripts(Toplevel):
@@ -872,8 +1044,8 @@ class ScanScripts(Toplevel):
         for patient_list in iterator:
             if isinstance(patient_list, list):
                 for patient in patient_list:
-                    if isinstance(patient, scriptScanner.PillpackPatient):
-                        matching_pillpack_patient: scriptScanner.PillpackPatient = (
+                    if isinstance(patient, PillpackPatient):
+                        matching_pillpack_patient: PillpackPatient = (
                             match_patient_to_pillpack_patient
                             (patient, self.main_application.collected_patients.pillpack_patient_dict)
                         )
@@ -907,7 +1079,7 @@ class ScanScripts(Toplevel):
             if self.main_application.collected_patients.pillpack_patient_dict.__contains__(last_name.lower()):
                 list_of_patients: list = self.main_application.collected_patients.pillpack_patient_dict.get(last_name.lower())
                 for patient in list_of_patients:
-                    if isinstance(patient, pillpackData.PillpackPatient):
+                    if isinstance(patient, PillpackPatient):
                         if patient.first_name.lower() == first_name.lower():
                             self.main_application.show_frame(consts.VIEW_PATIENT_SCREEN, patient)
                             self.parent.focus()
@@ -949,7 +1121,20 @@ def confirm_production_archival(application: App):
     cancel_button.grid(row=1, column=1, padx=50, sticky="ew")
 
 
-def match_patient_to_pillpack_patient(patient_to_be_matched: scriptScanner.PillpackPatient, pillpack_patient_dict: dict):
+def create_tool_tip(widget, text):
+    tool_tip = ToolTip(widget)
+
+    def enter(event):
+        tool_tip.showtip(text)
+
+    def leave(event):
+        tool_tip.hidetip()
+
+    widget.bind('<Enter>', enter)
+    widget.bind('<Leave>', leave)
+
+
+def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pillpack_patient_dict: dict):
     pillpack_patients: list = pillpack_patient_dict.get(
         patient_to_be_matched.last_name.lower())
     if pillpack_patients is None:
@@ -957,11 +1142,10 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: scriptScanner.Pillp
     pillpack_patients = list(
         filter
         (lambda entity:
-         typing.cast(scriptScanner.PillpackPatient, entity).first_name.lower() == patient_to_be_matched.first_name.lower(),
+         typing.cast(PillpackPatient, entity).first_name.lower() == patient_to_be_matched.first_name.lower(),
          pillpack_patients)
     )
-    matching_pillpack_patient: scriptScanner.PillpackPatient = pillpack_patients[0] \
-        if (len(pillpack_patients) > 0) else patient_to_be_matched
+    matching_pillpack_patient: PillpackPatient = pillpack_patients[0] if (len(pillpack_patients) > 0) else patient_to_be_matched
     return matching_pillpack_patient
 
 
@@ -976,8 +1160,7 @@ def populate_pillpack_production_data(application: App):
 def archive_pillpack_production_dialog():
     archive_file = filedialog.asksaveasfile(initialfile="Untitled.zip", defaultextension=".zip",
                                             filetypes=[("All files", ".*"), ("ZIP files", ".zip")])
-    print(archive_file)
-    pillpackData.archive_pillpack_production(archive_file)
+    archive_pillpack_production(archive_file)
 
 
 app = App()

@@ -17,7 +17,7 @@ consts.NOTHING_TO_COMPARE = 1
 consts.MISSING_MEDICATIONS = 2
 consts.DO_NOT_PRODUCE = 3
 consts.PRN_KEY = "prns_dict"
-consts.IGNORE_KEY = "ignore_dict"
+consts.LINKED_MEDS_KEY = "linked_meds_dict"
 consts.COLLECTED_PATIENTS_FILE = 'Patients.pk1'
 consts.PRNS_AND_IGNORED_MEDICATIONS_FILE = 'PrnsAndIgnoredMeds.pk1'
 
@@ -53,6 +53,7 @@ class PillpackPatient:
         self.incorrect_dosages_dict: dict = {}
         self.prn_medications_dict: dict = {}
         self.medications_to_ignore: dict = {}
+        self.linked_medications: dict = {}
 
     def do_not_produce(self, do_not_produce: bool):
         self.do_not_produce_flag = do_not_produce
@@ -121,6 +122,23 @@ class PillpackPatient:
 
     def remove_prn_medication_from_dict(self, med_to_be_removed: Medication):
         self.__remove_from_dict_of_medications(med_to_be_removed, self.prn_medications_dict)
+
+    def add_medication_link(self, linking_med: Medication, med_to_be_linked: Medication):
+        # Figure out how to make this work while scanning scripts in - try flipping the meds
+        if not self.linked_medications.__contains__(linking_med.medication_name):
+            if linking_med.dosage == med_to_be_linked.dosage:
+                self.remove_unknown_medication_from_dict(linking_med)
+                self.remove_missing_medication_from_dict(med_to_be_linked)
+                self.add_matched_medication_to_dict(linking_med)
+                self.linked_medications[linking_med.medication_name] = med_to_be_linked
+
+    def remove_medication_link(self, medication_to_unlink: Medication):
+        if self.linked_medications.__contains__(medication_to_unlink.medication_name):
+            linked_medication: Medication = self.linked_medications[medication_to_unlink.medication_name]
+            self.add_unknown_medication_to_dict(medication_to_unlink)
+            self.add_missing_medication_to_dict(linked_medication)
+            self.remove_matched_medication_from_dict(medication_to_unlink)
+            self.linked_medications.pop(medication_to_unlink.medication_name)
 
     def add_medication_to_ignore_dict(self, med_to_be_added: Medication):
         self.__add_to_dict_of_medications(med_to_be_added, self.medications_to_ignore)
@@ -287,7 +305,7 @@ def retrieve_prns_and_ignored_medications(patient: PillpackPatient, prns_and_ign
     key = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
     if prns_and_ignored_medications.__contains__(key.lower()):
         patient.prn_medications_dict = prns_and_ignored_medications[key.lower()][consts.PRN_KEY]
-        patient.medications_to_ignore = prns_and_ignored_medications[key.lower()][consts.IGNORE_KEY]
+        patient.linked_medications = prns_and_ignored_medications[key.lower()][consts.LINKED_MEDS_KEY]
     return patient
 
 

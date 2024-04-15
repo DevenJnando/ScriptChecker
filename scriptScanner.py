@@ -141,7 +141,13 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
                 clear_medication_warning_dicts(patient_from_production, pillpack_medication)
         else:
             if not full_medication_dict.__contains__(medication):
-                patient_from_production.add_unknown_medication_to_dict(script_medication_dict[medication])
+                linked_medication: Medication = check_for_linked_medications(script_medication_dict[medication],
+                                                                             patient_from_production.linked_medications)
+                if linked_medication is not None:
+                    patient_from_production.remove_missing_medication_from_dict(linked_medication)
+                    patient_from_production.add_matched_medication_to_dict(script_medication_dict[medication])
+                else:
+                    patient_from_production.add_unknown_medication_to_dict(script_medication_dict[medication])
     collected_patients.update_pillpack_patient_dict(patient_from_production)
 
 
@@ -149,6 +155,17 @@ def clear_medication_warning_dicts(patient: PillpackPatient, medication: Medicat
     patient.remove_missing_medication_from_dict(medication)
     patient.remove_incorrect_dosage_medication_from_dict(medication)
     patient.remove_unknown_medication_from_dict(medication)
+
+
+def check_for_linked_medications(medication_to_check: Medication, linked_medication_dict: dict):
+    if linked_medication_dict.__contains__(medication_to_check.medication_name):
+        if isinstance(linked_medication_dict[medication_to_check.medication_name], Medication):
+            return linked_medication_dict[medication_to_check.medication_name]
+        else:
+            print("Object retrieved from linked medications dictionary was not a Medication object.")
+            return None
+    else:
+        return None
 
 
 def extend_existing_patient_medication_dict(patient_object: PillpackPatient, collected_patients: CollectedPatients):
@@ -254,7 +271,7 @@ def update_current_prns_and_ignored_medications(patient: pillpackData.PillpackPa
         key: str = patient.first_name.lower() + " " + patient.last_name.lower() + " " + str(patient.date_of_birth)
         prns_ignored_medications_sub_dict: dict = {
             pillpackData.consts.PRN_KEY: patient.prn_medications_dict,
-            pillpackData.consts.IGNORE_KEY: patient.medications_to_ignore
+            pillpackData.consts.LINKED_MEDS_KEY: patient.linked_medications
         }
         prns_and_ignored_medications[key] = prns_ignored_medications_sub_dict
         save_prns_and_ignored_medications(prns_and_ignored_medications)
