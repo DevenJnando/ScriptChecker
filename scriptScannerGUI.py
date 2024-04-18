@@ -118,7 +118,10 @@ class App(tkinter.Tk):
                 for patient_view_name in list(self.app_observer.connected_views):
                     patient_view = self.app_observer.connected_views[patient_view_name]
                     if isinstance(patient_view, PatientMedicationDetails):
+                        self.app_observer.connected_views[patient_view_name].grid_remove()
                         self.app_observer.disconnect(patient_view_name)
+                        patient_view.display_canvas.unbind_all("<MouseWheel>")
+                        patient_view.grid_remove()
                         patient_view.destroy()
                 if self.app_observer.connected_views.__contains__(view_name):
                     frame: HomeScreen = self.app_observer.connected_views[view_name]
@@ -247,12 +250,14 @@ class HomeScreen(Frame):
         self.production_patients_results.rowconfigure(index=1, weight=1)
         results_notebook.add(self.production_patients_results, text="Patients in Pillpack Production")
 
+        columns = ('First Name',
+                   'Last Name',
+                   'Date of Birth',
+                   'No. of Medications',
+                   'Condition')
+
         self.production_patients_tree = Treeview(self.production_patients_results,
-                                                 columns=('First Name',
-                                                          'Last Name',
-                                                          'Date of Birth',
-                                                          'No. of Medications',
-                                                          'Condition'),
+                                                 columns=columns,
                                                  height=10)
         self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.list_of_trees.append([self.production_patients_tree,
@@ -263,11 +268,7 @@ class HomeScreen(Frame):
         results_notebook.add(self.perfect_match_patients, text="Perfectly Matched Patients")
 
         self.perfect_patients_tree = Treeview(self.perfect_match_patients,
-                                              columns=('First Name',
-                                                       'Last Name',
-                                                       'Date of Birth',
-                                                       'No. of Medications',
-                                                       'Condition'),
+                                              columns=columns,
                                               height=10)
         self.perfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.list_of_trees.append([self.perfect_patients_tree,
@@ -278,11 +279,7 @@ class HomeScreen(Frame):
         results_notebook.add(self.minor_mismatch_patients, text="Minor Mismatched Patients")
 
         self.imperfect_patients_tree = Treeview(self.minor_mismatch_patients,
-                                                columns=('First Name',
-                                                         'Last Name',
-                                                         'Date of Birth',
-                                                         'No. of Medications',
-                                                         'Condition'),
+                                                columns=columns,
                                                 height=10)
         self.imperfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.list_of_trees.append([self.imperfect_patients_tree,
@@ -293,11 +290,7 @@ class HomeScreen(Frame):
         results_notebook.add(self.severe_mismatch_patients, text="Severely Mismatched Patients")
 
         self.mismatched_patients_tree = Treeview(self.severe_mismatch_patients,
-                                                 columns=('First Name',
-                                                          'Last Name',
-                                                          'Date of Birth',
-                                                          'No. of Medications',
-                                                          'Condition'),
+                                                 columns=columns,
                                                  height=10)
 
         self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
@@ -309,10 +302,10 @@ class HomeScreen(Frame):
             tree: Treeview = tree_results_and_dict[0]
             results_location = tree_results_and_dict[1]
             associated_dict: dict = tree_results_and_dict[2]
+
             tree.heading('#0', text="Patient Name")
-            tree.heading('Date of Birth', text="Date of Birth")
-            tree.heading('No. of Medications', text="No. of Medications")
-            tree.heading('Condition', text="Condition")
+            for col in columns:
+                tree.heading(col, text=col)
             tree.bind('<Double-1>', lambda event, e=tree: self.on_treeview_double_click(e))
             filter_label = Label(results_location, font=self.font, text="Filter results: ")
             filter_combobox = tkinter.ttk.Combobox(results_location,
@@ -438,6 +431,7 @@ class HomeScreen(Frame):
                             else:
                                 tree_to_refresh.set(key, 'Condition', "No scripts yet scanned")
                                 tree_to_refresh.item(key, image=self.no_scripts_scanned_image)
+        sort_treeview(tree_to_refresh, "Last Name", False)
 
     def _filter_treeview(self, tree_to_filter: Treeview, dictionary_to_reference: dict, search_code: int = None):
         if search_code is not None:
@@ -1140,6 +1134,13 @@ def confirm_production_archival(application: App):
     archive_button.grid(row=1, column=0, padx=50, sticky="ew")
     cancel_button = Button(warning, text="Cancel", command=warning.destroy)
     cancel_button.grid(row=1, column=1, padx=50, sticky="ew")
+
+
+def sort_treeview(tree_to_sort: Treeview, column: str, is_descending: bool):
+    data = [(tree_to_sort.set(item, column), item) for item in tree_to_sort.get_children('')]
+    data.sort(reverse=is_descending)
+    for index, (val, item) in enumerate(data):
+        tree_to_sort.move(item, '', index)
 
 
 def create_tool_tip(widget, text):
