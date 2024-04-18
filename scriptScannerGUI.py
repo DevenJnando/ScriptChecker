@@ -26,6 +26,12 @@ consts.MISSING_MEDICATIONS_CODE = 2
 consts.DO_NOT_PRODUCE_STRING = "Do not produce"
 consts.DO_NOT_PRODUCE_CODE = 3
 
+bookmark_constants = types.SimpleNamespace()
+bookmark_constants.PRODUCTION_VIEW = 0
+bookmark_constants.PERFECTLY_MATCHED_PATIENTS_VIEW = 1
+bookmark_constants.MINOR_MISMATCH_PATIENTS_VIEW = 2
+bookmark_constants.SEVERE_MISMATCH_PATIENTS_VIEW = 3
+
 script_dir = sys.path[0]
 resources_dir = script_dir + "\\Resources"
 icons_dir = resources_dir + "\\icons"
@@ -63,11 +69,15 @@ collected_patients: scriptScanner.CollectedPatients = scriptScanner.CollectedPat
 
 class Observer:
     def __init__(self):
-        self.connected_views: list = []
+        self.connected_views: dict = {}
 
-    def connect(self, view_to_connect):
-        if not self.connected_views.__contains__(view_to_connect):
-            self.connected_views.append(view_to_connect)
+    def connect(self, view_name: str, view_to_connect: Frame):
+        if not self.connected_views.__contains__(view_name):
+            self.connected_views[view_name] = view_to_connect
+
+    def disconnect(self, view_name: str):
+        if self.connected_views.__contains__(view_name):
+            self.connected_views.pop(view_name)
 
     def clear(self):
         self.connected_views.clear()
@@ -105,15 +115,27 @@ class App(tkinter.Tk):
     def show_frame(self, view_name: str, patient_to_view: PillpackPatient = None):
         match view_name:
             case consts.HOME_SCREEN:
-                frame: HomeScreen = HomeScreen(parent=self.container, master=self)
-                self.app_observer.connect(frame)
-                frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
+                for patient_view_name in list(self.app_observer.connected_views):
+                    patient_view = self.app_observer.connected_views[patient_view_name]
+                    if isinstance(patient_view, PatientMedicationDetails):
+                        self.app_observer.disconnect(patient_view_name)
+                        patient_view.destroy()
+                if self.app_observer.connected_views.__contains__(view_name):
+                    frame: HomeScreen = self.app_observer.connected_views[view_name]
+                else:
+                    frame: HomeScreen = HomeScreen(parent=self.container, master=self)
+                    self.app_observer.connect(view_name, frame)
+                    frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
                 frame.tkraise()
             case consts.VIEW_PATIENT_SCREEN:
                 if isinstance(patient_to_view, PillpackPatient):
-                    frame: Frame = PatientMedicationDetails(parent=self.container, master=self, patient=patient_to_view)
-                    self.app_observer.connect(frame)
-                    frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
+                    key = view_name + patient_to_view.first_name + patient_to_view.last_name
+                    if self.app_observer.connected_views.__contains__(key):
+                        frame: PatientMedicationDetails = self.app_observer.connected_views[key]
+                    else:
+                        frame: PatientMedicationDetails = PatientMedicationDetails(parent=self.container, master=self, patient=patient_to_view)
+                        self.app_observer.connect(key, frame)
+                        frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
                     frame.tkraise()
 
 
@@ -906,7 +928,6 @@ class UnlinkMedication(Toplevel):
             self.medication_to_be_unlinked: Medication = self.selected_patient.linked_medications[medication_key]
         else:
             self.medication_to_be_unlinked: Medication = Medication("Invalid Medication", 0)
-        print(self.medication_to_be_unlinked.medication_name)
         self.application: App = master
         self.parent = parent
         self.geometry("600x400")
