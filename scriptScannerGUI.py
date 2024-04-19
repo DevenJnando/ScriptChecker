@@ -82,15 +82,16 @@ class Observer:
     def clear(self):
         self.connected_views.clear()
 
-    def update(self, view_to_update):
-        if self.connected_views.__contains__(view_to_update):
-            update_method = getattr(view_to_update, "update", None)
+    def update(self, key_of_view_to_update):
+        if self.connected_views.__contains__(key_of_view_to_update):
+            view_object = self.connected_views[key_of_view_to_update]
+            update_method = getattr(view_object, "update", None)
             if callable(update_method):
-                view_to_update.update()
+                view_object.update()
 
     def update_all(self):
-        for view in self.connected_views:
-            self.update(view)
+        for view_key in self.connected_views.keys():
+            self.update(view_key)
 
 
 class App(tkinter.Tk):
@@ -342,6 +343,7 @@ class HomeScreen(Frame):
 
     def threaded_get_production_data(self):
         self.loading_message_thread.join()
+        self.master.collected_patients = scriptScanner.CollectedPatients()
         populate_pillpack_production_data(self.master)
         return
 
