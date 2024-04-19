@@ -588,7 +588,7 @@ class PatientMedicationDetails(Frame):
 
     def _on_changes_button_click(self):
         self.patient_object.do_not_produce(not self.patient_object.do_not_produce_flag)
-        self.master.app_observer.update(self)
+        self.master.app_observer.update_all()
 
     def _refresh_patient_status(self):
         self.patient_object.determine_ready_to_produce_code()
@@ -751,7 +751,7 @@ class PatientMedicationDetails(Frame):
         scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
                                                                   self.master.collected_patients,
                                                                   self.master.loaded_prns_and_ignored_medications)
-        self.master.app_observer.update(self)
+        self.master.app_observer.update_all()
 
     def remove_prn_medication(self, selected_medication: Medication):
         if self.patient_object.prn_medications_dict.__contains__(selected_medication.medication_name):
@@ -764,7 +764,7 @@ class PatientMedicationDetails(Frame):
             scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
                                                                       self.master.collected_patients,
                                                                       self.master.loaded_prns_and_ignored_medications)
-            self.master.app_observer.update(self)
+            self.master.app_observer.update_all()
 
     def add_medication_to_ignore_dict(self, selected_medication: Medication, medication_dict: dict):
         if medication_dict.__contains__(selected_medication.medication_name):
@@ -774,7 +774,7 @@ class PatientMedicationDetails(Frame):
         scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
                                                                   self.master.collected_patients,
                                                                   self.master.loaded_prns_and_ignored_medications)
-        self.master.app_observer.update(self)
+        self.master.app_observer.update_all()
 
     def remove_medication_from_ignore_dict(self, selected_medication: Medication):
         if self.patient_object.medications_to_ignore.__contains__(selected_medication.medication_name):
@@ -787,7 +787,7 @@ class PatientMedicationDetails(Frame):
             scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
                                                                       self.master.collected_patients,
                                                                       self.master.loaded_prns_and_ignored_medications)
-            self.master.app_observer.update(self)
+            self.master.app_observer.update_all()
 
     def update(self):
         self._refresh_patient_status()
@@ -911,7 +911,7 @@ class LinkMedication(Toplevel):
         scriptScanner.update_current_prns_and_ignored_medications(self.selected_patient,
                                                                   self.application.collected_patients,
                                                                   self.application.loaded_prns_and_ignored_medications)
-        self.application.app_observer.update(self.parent)
+        self.application.app_observer.update_all()
 
 
 class UnlinkMedication(Toplevel):
@@ -948,7 +948,7 @@ class UnlinkMedication(Toplevel):
             scriptScanner.update_current_prns_and_ignored_medications(self.selected_patient,
                                                                       self.application.collected_patients,
                                                                       self.application.loaded_prns_and_ignored_medications)
-            self.application.app_observer.update(self.parent)
+            self.application.app_observer.update_all()
 
 
 class ToolTip(object):
