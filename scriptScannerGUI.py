@@ -1015,11 +1015,14 @@ class ScanScripts(Toplevel):
         self.patient_tree = Treeview(self, columns=('No. of Patients',), height=3)
         self.patient_tree.heading('No. of Patients', text="No. of Patients")
         self.patient_tree.insert('', 'end', 'perfect_matches', text="Perfect Matches", tags=('perfect',))
-        self.__iterate_patients(self.main_application.collected_patients.matched_patients.values(), 'perfect_matches')
+        self.__iterate_patients(self.main_application.collected_patients.matched_patients.values(),
+                                'perfect_matches')
         self.patient_tree.insert('', 'end', 'minor_mismatches', text="Minor Mismatches", tags=('minor',))
-        self.__iterate_patients(self.main_application.collected_patients.minor_mismatch_patients, 'minor_mismatches')
+        self.__iterate_patients(self.main_application.collected_patients.minor_mismatch_patients.values(),
+                                'minor_mismatches')
         self.patient_tree.insert('', 'end', 'severe_mismatches', text="Severe Mismatches", tags=('severe',))
-        self.__iterate_patients(self.main_application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
+        self.__iterate_patients(self.main_application.collected_patients.severe_mismatch_patients.values(),
+                                'severe_mismatches')
         self.patient_tree.tag_configure('perfect', background='#2f8000')
         self.patient_tree.tag_configure('minor', background='#a8a82c')
         self.patient_tree.tag_configure('severe', background='#a30202')
@@ -1027,7 +1030,8 @@ class ScanScripts(Toplevel):
                               str(len(self.main_application.collected_patients.matched_patients)) + "/"
                               + str(len(self.reduced_patients)))
         self.patient_tree.set('minor_mismatches', 'No. of Patients',
-                              len(self.main_application.collected_patients.minor_mismatch_patients))
+                              str(len(self.main_application.collected_patients.minor_mismatch_patients)) + "/"
+                              + str(len(self.reduced_patients)))
         self.patient_tree.set('severe_mismatches', 'No. of Patients',
                               len(self.main_application.collected_patients.severe_mismatch_patients))
         self.patient_tree.bind('<Double-1>', self.on_treeview_double_click)
