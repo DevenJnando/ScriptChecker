@@ -2,7 +2,6 @@ import re
 import xml.parsers.expat
 import xml.dom.minidom as minidom
 import datetime
-from functools import reduce
 
 from pillpackData import Medication, PillpackPatient
 import pillpackData

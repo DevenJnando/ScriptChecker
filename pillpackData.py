@@ -124,7 +124,6 @@ class PillpackPatient:
         self.__remove_from_dict_of_medications(med_to_be_removed, self.prn_medications_dict)
 
     def add_medication_link(self, linking_med: Medication, med_to_be_linked: Medication):
-        # Figure out how to make this work while scanning scripts in - try flipping the meds
         if not self.linked_medications.__contains__(linking_med.medication_name):
             if linking_med.dosage == med_to_be_linked.dosage:
                 self.remove_unknown_medication_from_dict(linking_med)

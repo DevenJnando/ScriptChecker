@@ -39,34 +39,6 @@ themes_dir = resources_dir + "\\themes"
 collected_patients: scriptScanner.CollectedPatients = scriptScanner.CollectedPatients()
 
 
-# class PatientReportTabViewer(CTkTabview):
-#    def __init__(self, master, **kwargs):
-#        super().__init__(master, **kwargs)
-#
-#    def add_tab(self, tab_text):
-#        self.add(tab_text)
-
-
-# class DarkModeFrame(CTkFrame):
-#    def __init__(self, master, **kwargs):
-#        super().__init__(master, **kwargs)
-#        self.dark_mode_toggle: bool = True
-#        dark_mode_image = CTkImage(light_image=Image.open(icons_dir + "\\dark-mode.png"),
-#                                   dark_image=Image.open(icons_dir + "\\light-mode.png"),
-#                                   size=(30, 30))
-
-#        def dark_mode():
-#            self.dark_mode_toggle = not self.dark_mode_toggle
-#            if self.dark_mode_toggle is True:
-#                set_appearance_mode("dark")
-#            else:
-#                set_appearance_mode("light")
-
-#        self.dark_mode_toggle = CTkButton(self, text="", command=dark_mode, image=dark_mode_image,
-#                                          width=2, height=2, fg_color="transparent")
-#        self.dark_mode_toggle.grid(row=0, column=0, sticky="w")
-
-
 class Observer:
     def __init__(self):
         self.connected_views: dict = {}
