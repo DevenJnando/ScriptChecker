@@ -1016,7 +1016,8 @@ class ScanScripts(Toplevel):
                                   + str(len(self.reduced_patients)))
             self.__iterate_patients(application.collected_patients.matched_patients.values(), 'perfect_matches')
             self.patient_tree.set('minor_mismatches', 'No. of Patients',
-                                  len(application.collected_patients.minor_mismatch_patients))
+                                  str(len(self.main_application.collected_patients.minor_mismatch_patients)) + "/"
+                                  + str(len(self.reduced_patients)))
             self.__iterate_patients(application.collected_patients.minor_mismatch_patients, 'minor_mismatches')
             self.patient_tree.set('severe_mismatches', 'No. of Patients',
                                   len(application.collected_patients.severe_mismatch_patients))
