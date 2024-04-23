@@ -26,6 +26,15 @@ consts.MISSING_MEDICATIONS_CODE = 2
 consts.DO_NOT_PRODUCE_STRING = "Do not produce"
 consts.DO_NOT_PRODUCE_CODE = 3
 
+warning_constants = types.SimpleNamespace()
+warning_constants.PILLPACK_DATA_OVERWRITE_WARNING = "WARNING: You already have a pillpack prodcution dataset open! "\
+                                                    "If you reload the downloaded pillpack data, "\
+                                                    "you will lose all data from any scanned in scripts. "\
+                                                    "Are you sure you wish to continue?"
+warning_constants.NO_LOADED_PILLPACK_DATA_WARNING = "You have not loaded any pillpack production data! "\
+                                                    "It is highly recommended that you do this before "\
+                                                    "scanning in scripts."
+
 bookmark_constants = types.SimpleNamespace()
 bookmark_constants.PRODUCTION_VIEW = 0
 bookmark_constants.PERFECTLY_MATCHED_PATIENTS_VIEW = 1
@@ -74,6 +83,8 @@ class App(tkinter.Tk):
         self.style.theme_use("forest-dark")
         self.geometry("1080x720")
         self.title("Pillpack Script Checker")
+        self.minsize(1080, 720)
+        self.maxsize(1080, 720)
         self.collected_patients = scriptScanner.load_collected_patients_from_object()
         self.loaded_prns_and_ignored_medications: dict = scriptScanner.load_prns_and_ignored_medications_from_object()
         self.app_observer: Observer = Observer()
@@ -125,8 +136,10 @@ class SideBar(Frame):
                                            command=lambda: self.master.show_frame(consts.HOME_SCREEN))
         self.view_patients_button.grid(row=0, column=0, pady=10)
         self.scan_scripts_button = Button(self, text="Scan Scripts",
-                                          command=lambda: check_if_pillpack_data_is_loaded(self.master,
-                                                                                           self.open_scan_scripts_window))
+                                          command=lambda: display_warning_if_pillpack_data_is_empty
+                                          (self.master,
+                                           self.open_scan_scripts_window,
+                                           warning_constants.NO_LOADED_PILLPACK_DATA_WARNING))
         self.scan_scripts_button.grid(row=1, column=0, pady=50)
         self.archive_production_data_button = Button(self, text="Archive Production Data",
                                                      command=lambda: confirm_production_archival(self.master))
@@ -138,9 +151,6 @@ class SideBar(Frame):
             self.script_window.grab_set()
         else:
             self.script_window.focus()  # if window exists focus it
-
-    def archive_pillpack_production(self):
-        pass
 
 
 class HomeScreen(Frame):
@@ -184,7 +194,11 @@ class HomeScreen(Frame):
         load_pillpack_button_image = PhotoImage(file=load_pillpack_image)
         self.pillpack_button_image = load_pillpack_button_image.subsample(5, 5)
         load_pillpack_button = Button(options_frame, image=self.pillpack_button_image,
-                                      command=lambda: self.threaded_production_data_retrieval())
+                                      command=lambda: display_warning_if_pillpack_data_is_not_empty
+                                      (self.master,
+                                       self.threaded_production_data_retrieval,
+                                       warning_constants.PILLPACK_DATA_OVERWRITE_WARNING)
+                                      )
         load_pillpack_label.grid(row=1, column=0, sticky="nsew")
         load_pillpack_button.grid(row=2, column=0, sticky="nsew")
 
@@ -193,8 +207,11 @@ class HomeScreen(Frame):
         scan_scripts_button_image = PhotoImage(file=scan_scripts_image)
         self.scripts_button_image = scan_scripts_button_image.subsample(5, 5)
         scan_scripts_button = Button(options_frame, image=self.scripts_button_image,
-                                     command=lambda: check_if_pillpack_data_is_loaded(self.master,
-                                                                                      self.open_scan_scripts_window))
+                                     command=lambda: display_warning_if_pillpack_data_is_empty
+                                     (self.master,
+                                      self.open_scan_scripts_window,
+                                      warning_constants.NO_LOADED_PILLPACK_DATA_WARNING)
+                                     )
         scan_scripts_label.grid(row=1, column=1, sticky="nsew")
         scan_scripts_button.grid(row=2, column=1, sticky="nsew")
 
@@ -1092,24 +1109,33 @@ class ScanScripts(Toplevel):
                             self.parent.focus()
 
 
-def check_if_pillpack_data_is_loaded(application: App, function):
+def display_warning_if_pillpack_data_is_empty(application: App, function, warning_text: str):
     if len(application.collected_patients.pillpack_patient_dict) == 0:
-        warning = Toplevel(master=application)
-        warning.geometry("400x200")
-        warning_label = Label(warning, text="You have not loaded any pillpack production data! "
-                                            "It is highly recommended that you do this before "
-                                            "scanning in scripts.",
-                              wraplength=200)
-        warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
-        go_back_button = Button(warning, text="Go back", command=warning.destroy)
-        go_back_button.grid(row=1, column=0, padx=50, sticky="ew")
-        continue_button = Button(warning, text="Continue anyway",
-                                 command=lambda: [warning.destroy(),
-                                                  function()
-                                                  ])
-        continue_button.grid(row=1, column=1, padx=50, sticky="ew")
+        display_warning(application, function, warning_text)
     else:
         function()
+
+
+def display_warning_if_pillpack_data_is_not_empty(application: App, function, warning_text: str):
+    if len(application.collected_patients.pillpack_patient_dict) > 0:
+        display_warning(application, function, warning_text)
+    else:
+        function()
+
+
+def display_warning(application: App, function, warning_text: str):
+    warning = Toplevel(master=application)
+    warning.geometry("300x240")
+    warning_label = Label(warning, text=warning_text,
+                          wraplength=200)
+    warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+    continue_button = Button(warning, text="Continue",
+                             command=lambda: [warning.destroy(),
+                                              function()
+                                              ])
+    continue_button.grid(row=1, column=0, padx=50, sticky="ew")
+    go_back_button = Button(warning, text="Go back", command=warning.destroy)
+    go_back_button.grid(row=1, column=1, padx=50, sticky="ew")
 
 
 def confirm_production_archival(application: App, home_screen: HomeScreen = None):
