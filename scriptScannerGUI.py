@@ -311,9 +311,13 @@ class HomeScreen(Frame):
             filter_combobox.bind("<<ComboboxSelected>>",
                                  lambda event, e=(filter_combobox, tree, associated_dict):
                                  self._on_filter_selected(e[0].get(), e[1], e[2]))
+            search_bar_label = Label(results_location, font=self.font, text="Search: ")
+            search_bar = Entry(results_location, width=50)
             filter_label.grid(row=0, column=0)
             filter_combobox.grid(row=1, column=0)
-            tree.grid(row=2, column=0, sticky="ew")
+            search_bar_label.grid(row=2, column=0)
+            search_bar.grid(row=3, column=0)
+            tree.grid(row=4, column=0, sticky="ew")
 
         results_notebook.pack(expand=True, fill="both", padx=5, pady=5)
 
