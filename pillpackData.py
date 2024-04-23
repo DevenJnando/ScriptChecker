@@ -141,9 +141,15 @@ class PillpackPatient:
 
     def add_medication_to_ignore_dict(self, med_to_be_added: Medication):
         self.__add_to_dict_of_medications(med_to_be_added, self.medications_to_ignore)
+        self.remove_incorrect_dosage_medication_from_dict(med_to_be_added)
+        self.remove_missing_medication_from_dict(med_to_be_added)
+        self.add_matched_medication_to_dict(med_to_be_added)
 
-    def remove_medication_from_ignore_dict(self, med_to_be_removed: Medication):
+    def remove_medication_from_ignore_dict(self, med_to_be_removed: Medication, med_with_correct_dosage: Medication):
         self.__remove_from_dict_of_medications(med_to_be_removed, self.medications_to_ignore)
+        self.remove_matched_medication_from_dict(med_to_be_removed)
+        self.add_incorrect_dosage_medication_to_dict(med_to_be_removed)
+        self.add_missing_medication_to_dict(med_with_correct_dosage)
 
     def __hash__(self):
         return hash((self.first_name, self.last_name, self.date_of_birth))
