@@ -130,7 +130,8 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
         elif not patient_from_script.medication_dict.__contains__(medication):
             if not patient_from_production.matched_medications_dict.__contains__(medication):
                 if (not patient_from_production.prn_medications_dict.__contains__(medication)
-                        and not patient_from_production.medications_to_ignore.__contains__(medication)):
+                        and not patient_from_production.medications_to_ignore.__contains__(medication)
+                        and not patient_from_production.linked_medications.__contains__(medication)):
                     patient_from_production.add_missing_medication_to_dict(full_medication_dict[medication])
     for medication in script_medication_dict.keys():
         substring_results = [key for key in full_medication_dict.keys() if key in medication]
@@ -145,7 +146,8 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
                 if linked_medication is not None:
                     patient_from_production.remove_missing_medication_from_dict(linked_medication)
                     patient_from_production.add_matched_medication_to_dict(script_medication_dict[medication])
-                else:
+                elif (not patient_from_production.prn_medications_dict.__contains__(medication)
+                      and not patient_from_production.medications_to_ignore.__contains__(medication)):
                     patient_from_production.add_unknown_medication_to_dict(script_medication_dict[medication])
     collected_patients.update_pillpack_patient_dict(patient_from_production)
 

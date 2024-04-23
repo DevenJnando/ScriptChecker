@@ -484,7 +484,9 @@ class PatientMedicationDetails(Frame):
         self.link_medication_window = None
         self.unlink_medication_window = None
         self.change_toggle_button_image = None
-        self.linked_medication_image = None
+        link_icon_path = icons_dir + "\\link.png"
+        link_icon_image = PhotoImage(file=link_icon_path)
+        self.linked_medication_image = link_icon_image.subsample(20, 20)
         self.do_not_produce_image = None
         self.missing_scripts_image = None
         self.no_scripts_scanned_image = None
@@ -632,9 +634,6 @@ class PatientMedicationDetails(Frame):
                 medication_dosage_label.grid(row=i + 1, column=1)
                 if self.patient_object.linked_medications.__contains__(medication.medication_name):
                     linked_medication: Medication = self.patient_object.linked_medications[medication.medication_name]
-                    link_icon_path = icons_dir + "\\link.png"
-                    link_icon_image = PhotoImage(file=link_icon_path)
-                    self.linked_medication_image = link_icon_image.subsample(20, 20)
                     link_icon_label = Label(label_frame_to_populate, image=self.linked_medication_image)
                     link_icon_label.grid(row=i+1, column=2)
                     unlink_button = Button(label_frame_to_populate, text="Unlink",
