@@ -255,6 +255,7 @@ def __create_patient_object(order_element):
         for medication in medication_items:
             medication_object = __generate_medication_dict(medication)
             if isinstance(medication_object, Medication):
+                __update_medication_dosage(patient_object, medication_object)
                 patient_object.add_medication_to_dict(medication_object)
         return patient_object
     else:
@@ -276,6 +277,13 @@ def __parse_xml(list_of_orders_raw_text: list):
         except TypeError as e:
             print("TypeError: ", e)
     return order_information
+
+
+def __update_medication_dosage(patient_object: PillpackPatient, medication_object: Medication):
+    if patient_object.medication_dict.__contains__(medication_object.medication_name):
+        medication_to_update: Medication = patient_object.medication_dict[medication_object.medication_name]
+        medication_to_update.dosage = medication_to_update.dosage + medication_object.dosage
+        patient_object.medication_dict[medication_object.medication_name] = medication_to_update
 
 
 def get_patient_medicine_data(prns_and_ignored_medications: dict):
