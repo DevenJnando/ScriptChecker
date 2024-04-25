@@ -250,9 +250,11 @@ class HomeScreen(Frame):
                                                  columns=columns,
                                                  height=10)
         self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        self.detached_production_patient_nodes: list = []
         self.list_of_trees.append([self.production_patients_tree,
                                    self.production_patients_results,
-                                   self.master.collected_patients.pillpack_patient_dict])
+                                   self.master.collected_patients.pillpack_patient_dict,
+                                   self.detached_production_patient_nodes])
 
         self.perfect_match_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(self.perfect_match_patients, text="Perfectly Matched Patients")
@@ -261,9 +263,11 @@ class HomeScreen(Frame):
                                               columns=columns,
                                               height=10)
         self.perfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        self.detached_perfect_patient_nodes: list = []
         self.list_of_trees.append([self.perfect_patients_tree,
                                    self.perfect_match_patients,
-                                   self.master.collected_patients.matched_patients])
+                                   self.master.collected_patients.matched_patients,
+                                   self.detached_perfect_patient_nodes])
 
         self.minor_mismatch_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(self.minor_mismatch_patients, text="Minor Mismatched Patients")
@@ -272,9 +276,11 @@ class HomeScreen(Frame):
                                                 columns=columns,
                                                 height=10)
         self.imperfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        self.detached_imperfect_patient_nodes: list = []
         self.list_of_trees.append([self.imperfect_patients_tree,
                                    self.minor_mismatch_patients,
-                                   self.master.collected_patients.minor_mismatch_patients])
+                                   self.master.collected_patients.minor_mismatch_patients,
+                                   self.detached_imperfect_patient_nodes])
 
         self.severe_mismatch_patients = tkinter.ttk.Frame(results_notebook)
         results_notebook.add(self.severe_mismatch_patients, text="Severely Mismatched Patients")
@@ -284,14 +290,17 @@ class HomeScreen(Frame):
                                                  height=10)
 
         self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        self.detatched_mismatched_patient_nodes = []
         self.list_of_trees.append([self.mismatched_patients_tree,
                                    self.severe_mismatch_patients,
-                                   self.master.collected_patients.severe_mismatch_patients])
+                                   self.master.collected_patients.severe_mismatch_patients,
+                                   self.detatched_mismatched_patient_nodes])
 
         for tree_results_and_dict in self.list_of_trees:
             tree: Treeview = tree_results_and_dict[0]
             results_location = tree_results_and_dict[1]
             associated_dict: dict = tree_results_and_dict[2]
+            detached_nodes: list = tree_results_and_dict[3]
 
             tree.heading('#0', text="Patient Name")
             for col in columns:
@@ -311,8 +320,16 @@ class HomeScreen(Frame):
             filter_combobox.bind("<<ComboboxSelected>>",
                                  lambda event, e=(filter_combobox, tree, associated_dict):
                                  self._on_filter_selected(e[0].get(), e[1], e[2]))
+            search_variable: StringVar = StringVar()
+            search_variable.trace("w",
+                                  lambda name,
+                                  index,
+                                  mode,
+                                  args=(tree, detached_nodes, search_variable):
+                                  search_treeview(args[0], args[1], args[2])
+                                  )
             search_bar_label = Label(results_location, font=self.font, text="Search: ")
-            search_bar = Entry(results_location, width=50)
+            search_bar = Entry(results_location, width=50, textvariable=search_variable)
             filter_label.grid(row=0, column=0)
             filter_combobox.grid(row=1, column=0)
             search_bar_label.grid(row=2, column=0)
@@ -368,16 +385,20 @@ class HomeScreen(Frame):
     def _update_list_of_trees(self):
         self.list_of_trees[0] = ([self.production_patients_tree,
                                   self.production_patients_results,
-                                  self.master.collected_patients.pillpack_patient_dict])
+                                  self.master.collected_patients.pillpack_patient_dict,
+                                  self.detached_production_patient_nodes])
         self.list_of_trees[1] = ([self.perfect_patients_tree,
                                   self.perfect_match_patients,
-                                  self.master.collected_patients.matched_patients])
+                                  self.master.collected_patients.matched_patients,
+                                  self.detached_perfect_patient_nodes])
         self.list_of_trees[2] = ([self.imperfect_patients_tree,
                                   self.minor_mismatch_patients,
-                                  self.master.collected_patients.minor_mismatch_patients])
+                                  self.master.collected_patients.minor_mismatch_patients,
+                                  self.detached_imperfect_patient_nodes])
         self.list_of_trees[3] = ([self.mismatched_patients_tree,
                                   self.severe_mismatch_patients,
-                                  self.master.collected_patients.severe_mismatch_patients])
+                                  self.master.collected_patients.severe_mismatch_patients,
+                                  self.detatched_mismatched_patient_nodes])
 
     def _refresh_patient_status(self):
         for patient_list in self.master.collected_patients.pillpack_patient_dict.values():
@@ -1156,6 +1177,25 @@ def confirm_production_archival(application: App, home_screen: HomeScreen = None
     archive_button.grid(row=1, column=0, padx=50, sticky="ew")
     cancel_button = Button(warning, text="Cancel", command=warning.destroy)
     cancel_button.grid(row=1, column=1, padx=50, sticky="ew")
+
+
+def search_treeview(tree_to_search: Treeview, detached_items: list, search_query: StringVar):
+    search_string: str = search_query.get()
+    for node in detached_items:
+        if tree_to_search.exists(node):
+            tree_to_search.reattach(node, '', 0)
+    if len(search_string) > 0:
+        for node in tree_to_search.get_children():
+            match: bool = False
+            for value in tree_to_search.item(node)['values']:
+                if search_string.lower() in str(value).lower():
+                    match = True
+                    break
+            if match:
+                tree_to_search.reattach(node, '', 0)
+            else:
+                detached_items.append(node)
+                tree_to_search.detach(node)
 
 
 def sort_treeview(tree_to_sort: Treeview, column: str, is_descending: bool):
