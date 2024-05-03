@@ -240,14 +240,14 @@ class HomeScreen(Frame):
         self.production_patients_results.rowconfigure(index=1, weight=1)
         results_notebook.add(self.production_patients_results, text="Patients in Pillpack Production")
 
-        columns = ('First Name',
-                   'Last Name',
-                   'Date of Birth',
-                   'No. of Medications',
-                   'Condition')
+        self.columns = ('First Name',
+                        'Last Name',
+                        'Date of Birth',
+                        'No. of Medications',
+                        'Condition')
 
         self.production_patients_tree = Treeview(self.production_patients_results,
-                                                 columns=columns,
+                                                 columns=self.columns,
                                                  height=10)
         self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.detached_production_patient_nodes: list = []
@@ -260,7 +260,7 @@ class HomeScreen(Frame):
         results_notebook.add(self.perfect_match_patients, text="Perfectly Matched Patients")
 
         self.perfect_patients_tree = Treeview(self.perfect_match_patients,
-                                              columns=columns,
+                                              columns=self.columns,
                                               height=10)
         self.perfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.detached_perfect_patient_nodes: list = []
@@ -273,7 +273,7 @@ class HomeScreen(Frame):
         results_notebook.add(self.minor_mismatch_patients, text="Minor Mismatched Patients")
 
         self.imperfect_patients_tree = Treeview(self.minor_mismatch_patients,
-                                                columns=columns,
+                                                columns=self.columns,
                                                 height=10)
         self.imperfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
         self.detached_imperfect_patient_nodes: list = []
@@ -286,7 +286,7 @@ class HomeScreen(Frame):
         results_notebook.add(self.severe_mismatch_patients, text="Severely Mismatched Patients")
 
         self.mismatched_patients_tree = Treeview(self.severe_mismatch_patients,
-                                                 columns=columns,
+                                                 columns=self.columns,
                                                  height=10)
 
         self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
@@ -296,46 +296,7 @@ class HomeScreen(Frame):
                                    self.master.collected_patients.severe_mismatch_patients,
                                    self.detatched_mismatched_patient_nodes])
 
-        for tree_results_and_dict in self.list_of_trees:
-            tree: Treeview = tree_results_and_dict[0]
-            results_location = tree_results_and_dict[1]
-            associated_dict: dict = tree_results_and_dict[2]
-            detached_nodes: list = tree_results_and_dict[3]
-
-            tree.heading('#0', text="Patient Name")
-            for col in columns:
-                tree.heading(col, text=col)
-            tree.bind('<Double-1>', lambda event, e=tree: self.on_treeview_double_click(e))
-            filter_label = Label(results_location, font=self.font, text="Filter results: ")
-            filter_combobox = tkinter.ttk.Combobox(results_location,
-                                                   state="readonly",
-                                                   font=self.font,
-                                                   values=[consts.SHOW_ALL_RESULTS_STRING,
-                                                           consts.READY_TO_PRODUCE_STRING,
-                                                           consts.MISSING_MEDICATIONS_STRING,
-                                                           consts.DO_NOT_PRODUCE_STRING,
-                                                           consts.NOTHING_TO_COMPARE_STRING
-                                                           ]
-                                                   )
-            filter_combobox.bind("<<ComboboxSelected>>",
-                                 lambda event, e=(filter_combobox, tree, associated_dict):
-                                 self._on_filter_selected(e[0].get(), e[1], e[2]))
-            search_variable: StringVar = StringVar()
-            search_variable.trace("w",
-                                  lambda name,
-                                  index,
-                                  mode,
-                                  args=(tree, detached_nodes, search_variable):
-                                  search_treeview(args[0], args[1], args[2])
-                                  )
-            search_bar_label = Label(results_location, font=self.font, text="Search: ")
-            search_bar = Entry(results_location, width=50, textvariable=search_variable)
-            filter_label.grid(row=0, column=0)
-            filter_combobox.grid(row=1, column=0)
-            search_bar_label.grid(row=2, column=0)
-            search_bar.grid(row=3, column=0)
-            tree.grid(row=4, column=0, sticky="ew")
-
+        self.set_tree_widgets()
         results_notebook.pack(expand=True, fill="both", padx=5, pady=5)
 
         self.update()
@@ -399,6 +360,47 @@ class HomeScreen(Frame):
                                   self.severe_mismatch_patients,
                                   self.master.collected_patients.severe_mismatch_patients,
                                   self.detatched_mismatched_patient_nodes])
+
+    def set_tree_widgets(self):
+        for tree_results_and_dict in self.list_of_trees:
+            tree: Treeview = tree_results_and_dict[0]
+            results_location = tree_results_and_dict[1]
+            associated_dict: dict = tree_results_and_dict[2]
+            detached_nodes: list = tree_results_and_dict[3]
+
+            tree.heading('#0', text="Patient Name")
+            for col in self.columns:
+                tree.heading(col, text=col)
+            tree.bind('<Double-1>', lambda event, e=tree: self.on_treeview_double_click(e))
+            filter_label = Label(results_location, font=self.font, text="Filter results: ")
+            filter_combobox = tkinter.ttk.Combobox(results_location,
+                                                   state="readonly",
+                                                   font=self.font,
+                                                   values=[consts.SHOW_ALL_RESULTS_STRING,
+                                                           consts.READY_TO_PRODUCE_STRING,
+                                                           consts.MISSING_MEDICATIONS_STRING,
+                                                           consts.DO_NOT_PRODUCE_STRING,
+                                                           consts.NOTHING_TO_COMPARE_STRING
+                                                           ]
+                                                   )
+            filter_combobox.bind("<<ComboboxSelected>>",
+                                 lambda event, e=(filter_combobox, tree, associated_dict):
+                                 self._on_filter_selected(e[0].get(), e[1], e[2]))
+            search_variable: StringVar = StringVar()
+            search_variable.trace("w",
+                                  lambda name,
+                                  index,
+                                  mode,
+                                  args=(tree, detached_nodes, search_variable):
+                                  search_treeview(args[0], args[1], args[2])
+                                  )
+            search_bar_label = Label(results_location, font=self.font, text="Search: ")
+            search_bar = Entry(results_location, width=50, textvariable=search_variable)
+            filter_label.grid(row=0, column=0)
+            filter_combobox.grid(row=1, column=0)
+            search_bar_label.grid(row=2, column=0)
+            search_bar.grid(row=3, column=0)
+            tree.grid(row=4, column=0, sticky="ew")
 
     def _refresh_patient_status(self):
         for patient_list in self.master.collected_patients.pillpack_patient_dict.values():
@@ -470,6 +472,7 @@ class HomeScreen(Frame):
     def update(self):
         self._update_list_of_trees()
         self._refresh_patient_status()
+        self.set_tree_widgets()
         for tree_results_and_dict in self.list_of_trees:
             tree: Treeview = tree_results_and_dict[0]
             associated_dict: dict = tree_results_and_dict[2]
