@@ -734,23 +734,26 @@ class PatientMedicationDetails(Frame):
         for i in range(0, len(incorrect_dosages_values)):
             medication = incorrect_dosages_values[i]
             if isinstance(medication, Medication):
-                if self.patient_object.medication_dict.__contains__(medication.medication_name):
-                    medication_in_production: Medication = self.patient_object.medication_dict.get(
-                        medication.medication_name
-                    )
-                    medication_name_label = Label(incorrect_medication_dosage_frame, text=medication.medication_name)
-                    medication_dosage_in_production_label = Label(incorrect_medication_dosage_frame,
-                                                                  text=medication_in_production.dosage)
-                    medication_dosage_on_script_label = Label(incorrect_medication_dosage_frame,
-                                                              text=medication.dosage)
-                    add_to_ignore_list_button = Button(incorrect_medication_dosage_frame,
-                                                       text="Ignore dosage inaccuracy",
-                                                       command=lambda e=medication:
-                                                       self.add_medication_to_ignore_dict(e))
-                    medication_name_label.grid(row=i + 1, column=0)
-                    medication_dosage_in_production_label.grid(row=i + 1, column=1)
-                    medication_dosage_on_script_label.grid(row=i + 1, column=2)
-                    add_to_ignore_list_button.grid(row=i + 1, column=3)
+                substring_results = [key for key in self.patient_object.medication_dict.keys() if key in medication.medication_name]
+                if len(substring_results) > 0:
+                    matching_key = substring_results[0]
+                    if self.patient_object.medication_dict.__contains__(matching_key):
+                        medication_in_production: Medication = self.patient_object.medication_dict.get(
+                            matching_key
+                        )
+                        medication_name_label = Label(incorrect_medication_dosage_frame, text=medication.medication_name)
+                        medication_dosage_in_production_label = Label(incorrect_medication_dosage_frame,
+                                                                      text=medication_in_production.dosage)
+                        medication_dosage_on_script_label = Label(incorrect_medication_dosage_frame,
+                                                                  text=medication.dosage)
+                        add_to_ignore_list_button = Button(incorrect_medication_dosage_frame,
+                                                           text="Ignore dosage inaccuracy",
+                                                           command=lambda e=medication:
+                                                           self.add_medication_to_ignore_dict(e))
+                        medication_name_label.grid(row=i + 1, column=0)
+                        medication_dosage_in_production_label.grid(row=i + 1, column=1)
+                        medication_dosage_on_script_label.grid(row=i + 1, column=2)
+                        add_to_ignore_list_button.grid(row=i + 1, column=3)
 
     @staticmethod
     def clear_label_frame(frame_to_clear: LabelFrame):

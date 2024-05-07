@@ -126,6 +126,7 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
                 patient_from_production.add_matched_medication_to_dict(pillpack_medication)
                 clear_medication_warning_dicts(patient_from_production, pillpack_medication)
             else:
+                script_medication.medication_name = pillpack_medication.medication_name
                 patient_from_production.add_incorrect_dosage_medication_to_dict(script_medication)
         elif not patient_from_script.medication_dict.__contains__(medication):
             if not patient_from_production.matched_medications_dict.__contains__(medication):
