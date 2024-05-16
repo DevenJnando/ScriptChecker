@@ -166,6 +166,12 @@ def __load_settings():
     return yaml.safe_load(open(sys.path[0] + "\\settings.yaml"))
 
 
+def __modify_pillpack_location(new_location: str):
+    location_json = {"pillpackDataLocation": new_location}
+    with open(sys.path[0] + "\\settings.yaml", 'w') as file:
+        yaml.dump(location_json, file, sort_keys=False)
+
+
 config = __load_settings()
 patient_order_list: list
 

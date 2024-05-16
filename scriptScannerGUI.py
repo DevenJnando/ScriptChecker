@@ -10,12 +10,15 @@ from tkinter import *
 from tkinter import font
 from tkinter import filedialog
 
+import pillpackData
 from pillpackData import PillpackPatient, Medication, archive_pillpack_production
 import scriptScanner
 
 consts = types.SimpleNamespace()
+consts.UNSET_LOCATION = "Location not set"
 consts.HOME_SCREEN = "HomeScreen"
 consts.VIEW_PATIENT_SCREEN = "ViewPatientScreen"
+consts.VIEW_PILLPACK_FOLDER_LOCATION = "ViewPillpackProductionFolder"
 consts.SHOW_ALL_RESULTS_STRING = "All Patients"
 consts.READY_TO_PRODUCE_STRING = "Ready to produce"
 consts.READY_TO_PRODUCE_CODE = 0
@@ -27,12 +30,12 @@ consts.DO_NOT_PRODUCE_STRING = "Do not produce"
 consts.DO_NOT_PRODUCE_CODE = 3
 
 warning_constants = types.SimpleNamespace()
-warning_constants.PILLPACK_DATA_OVERWRITE_WARNING = "WARNING: You already have a pillpack prodcution dataset open! "\
-                                                    "If you reload the downloaded pillpack data, "\
-                                                    "you will lose all data from any scanned in scripts. "\
+warning_constants.PILLPACK_DATA_OVERWRITE_WARNING = "WARNING: You already have a pillpack production dataset open! " \
+                                                    "If you reload the downloaded pillpack data, " \
+                                                    "you will lose all data from any scanned in scripts. " \
                                                     "Are you sure you wish to continue?"
-warning_constants.NO_LOADED_PILLPACK_DATA_WARNING = "You have not loaded any pillpack production data! "\
-                                                    "It is highly recommended that you do this before "\
+warning_constants.NO_LOADED_PILLPACK_DATA_WARNING = "You have not loaded any pillpack production data! " \
+                                                    "It is highly recommended that you do this before " \
                                                     "scanning in scripts."
 
 bookmark_constants = types.SimpleNamespace()
@@ -92,7 +95,10 @@ class App(tkinter.Tk):
         self.title_font = font.Font(family='Verdana', size=28, weight="bold")
         self.container = Frame(self)
         self.container.pack(side="top", fill="both", expand=True)
-        self.show_frame(consts.HOME_SCREEN)
+        if pillpackData.config["pillpackDataLocation"] == consts.UNSET_LOCATION:
+            self.show_frame(consts.VIEW_PILLPACK_FOLDER_LOCATION)
+        else:
+            self.show_frame(consts.HOME_SCREEN)
 
         # set_appearance_mode("dark")
 
@@ -120,10 +126,21 @@ class App(tkinter.Tk):
                     if self.app_observer.connected_views.__contains__(key):
                         frame: PatientMedicationDetails = self.app_observer.connected_views[key]
                     else:
-                        frame: PatientMedicationDetails = PatientMedicationDetails(parent=self.container, master=self, patient=patient_to_view)
+                        frame: PatientMedicationDetails = PatientMedicationDetails(parent=self.container, master=self,
+                                                                                   patient=patient_to_view)
                         self.app_observer.connect(key, frame)
                         frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
                     frame.tkraise()
+            case consts.VIEW_PILLPACK_FOLDER_LOCATION:
+                if self.app_observer.connected_views.__contains__(consts.VIEW_PILLPACK_FOLDER_LOCATION):
+                    frame: ViewPillpackProductionFolder = self.app_observer.connected_views[
+                        consts.VIEW_PILLPACK_FOLDER_LOCATION]
+                else:
+                    frame: ViewPillpackProductionFolder = ViewPillpackProductionFolder(parent=self.container,
+                                                                                       master=self)
+                    self.app_observer.connect(consts.VIEW_PILLPACK_FOLDER_LOCATION, frame)
+                    frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
+                frame.tkraise()
 
 
 class SideBar(Frame):
@@ -144,6 +161,10 @@ class SideBar(Frame):
         self.archive_production_data_button = Button(self, text="Archive Production Data",
                                                      command=lambda: confirm_production_archival(self.master))
         self.archive_production_data_button.grid(row=2, column=0, pady=50)
+        self.view_pillpack_folder_location_button = Button(self, text="View Pillpack Folder location",
+                                                           command=lambda: self.master.show_frame
+                                                           (consts.VIEW_PILLPACK_FOLDER_LOCATION))
+        self.view_pillpack_folder_location_button.grid(row=3, column=0, pady=50)
 
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
@@ -389,9 +410,9 @@ class HomeScreen(Frame):
             search_variable: StringVar = StringVar()
             search_variable.trace("w",
                                   lambda name,
-                                  index,
-                                  mode,
-                                  args=(tree, detached_nodes, search_variable):
+                                         index,
+                                         mode,
+                                         args=(tree, detached_nodes, search_variable):
                                   search_treeview(args[0], args[1], args[2])
                                   )
             search_bar_label = Label(results_location, font=self.font, text="Search: ")
@@ -482,6 +503,7 @@ class HomeScreen(Frame):
         if self.script_window is None or not self.script_window.winfo_exists():
             self.script_window = ScanScripts(self, self.master)  # create window if its None or destroyed
             self.script_window.grab_set()
+            self.script_window.attributes('-topmost', 'true')
         else:
             self.script_window.focus()  # if window exists focus it
 
@@ -521,6 +543,54 @@ class HomeScreen(Frame):
                     self.master.show_frame(consts.VIEW_PATIENT_SCREEN, selected_patient)
             except IndexError as e:
                 print("IndexError: ", e)
+
+
+class ViewPillpackProductionFolder(Frame):
+    def __init__(self, parent, master: App):
+        Frame.__init__(self, parent)
+        self.master: App = master
+        self.descriptor_font = font.Font(family='Verdana', size=20, weight="bold")
+        self.folder_location_font = font.Font(family='Verdana', size=14, weight="normal")
+        self.folder_location = pillpackData.config["pillpackDataLocation"]
+        side_bar = SideBar(self, self.master)
+        side_bar.pack(side="left", fill="both")
+        container_frame = tkinter.ttk.Frame(self)
+        container_frame.pack(side="top", fill="both")
+        self.folder_descriptor_label = Label(container_frame, font=self.descriptor_font,
+                                             text="Pillpack Production Folder Location:")
+        self.folder_descriptor_label.grid(row=0, column=0)
+        self.folder_location_string_var: StringVar = StringVar()
+        self.folder_location_string_var.set(self.folder_location)
+        self.folder_location_label = Label(container_frame, font=self.folder_location_font,
+                                           textvariable=self.folder_location_string_var)
+        self.folder_location_label.grid(row=1, column=0)
+        self.change_pillpack_directory_button = Button(container_frame, text="Select pillpack directory",
+                                                       command=lambda: [set_pillpack_production_directory(),
+                                                                        self.update()])
+        self.change_pillpack_directory_button.grid(row=2, column=0, pady=50)
+        if pillpackData.config["pillpackDataLocation"] == consts.UNSET_LOCATION:
+            warning_message: NoPillpackFolderLocationSetWarning = NoPillpackFolderLocationSetWarning(self)
+            warning_message.grab_set()
+
+    def update(self):
+        self.folder_location = pillpackData.config["pillpackDataLocation"]
+        self.folder_location_string_var.set(self.folder_location)
+
+
+class NoPillpackFolderLocationSetWarning(Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.geometry("400x200")
+        self.attributes('-topmost', 'true')
+        self.parent = parent
+        self.warning_label = Label(self, text="It looks like this is your first time using Scriptspector!"
+                                              " Please select where your pillpack ATMS files are located"
+                                              " by clicking 'Select pillpack directory' and navigating to the "
+                                              " correct folder.",
+                                   wraplength=300)
+        self.ok_button = Button(self, text="OK", command=self.destroy)
+        self.warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+        self.ok_button.grid(row=1, column=0, padx=50, sticky="ew")
 
 
 class PatientMedicationDetails(Frame):
@@ -659,7 +729,7 @@ class PatientMedicationDetails(Frame):
                              include_prn_medications_button: bool = False,
                              include_delete_prn_medications_button: bool = False,
                              create_medication_link_button: bool = False,
-                             remove_from_ignored_medications_button = False
+                             remove_from_ignored_medications_button=False
                              ):
         dictionary_values: list = list(dictionary_to_iterate.values())
         if len(dictionary_values) > 0:
@@ -681,10 +751,10 @@ class PatientMedicationDetails(Frame):
                 if self.patient_object.linked_medications.__contains__(medication.medication_name):
                     linked_medication: Medication = self.patient_object.linked_medications[medication.medication_name]
                     link_icon_label = Label(label_frame_to_populate, image=self.linked_medication_image)
-                    link_icon_label.grid(row=i+1, column=2)
+                    link_icon_label.grid(row=i + 1, column=2)
                     unlink_button = Button(label_frame_to_populate, text="Unlink",
                                            command=lambda: self.open_unlink_medication_view(medication.medication_name))
-                    unlink_button.grid(row=i+1, column=3)
+                    unlink_button.grid(row=i + 1, column=3)
                     create_tool_tip(link_icon_label, text=linked_medication.medication_name)
                 if include_prn_medications_button:
                     make_prn_medication_button = Button(label_frame_to_populate, text="Set as PRN",
@@ -734,14 +804,16 @@ class PatientMedicationDetails(Frame):
         for i in range(0, len(incorrect_dosages_values)):
             medication = incorrect_dosages_values[i]
             if isinstance(medication, Medication):
-                substring_results = [key for key in self.patient_object.medication_dict.keys() if key in medication.medication_name]
+                substring_results = [key for key in self.patient_object.medication_dict.keys() if
+                                     key in medication.medication_name]
                 if len(substring_results) > 0:
                     matching_key = substring_results[0]
                     if self.patient_object.medication_dict.__contains__(matching_key):
                         medication_in_production: Medication = self.patient_object.medication_dict.get(
                             matching_key
                         )
-                        medication_name_label = Label(incorrect_medication_dosage_frame, text=medication.medication_name)
+                        medication_name_label = Label(incorrect_medication_dosage_frame,
+                                                      text=medication.medication_name)
                         medication_dosage_in_production_label = Label(incorrect_medication_dosage_frame,
                                                                       text=medication_in_production.dosage)
                         medication_dosage_on_script_label = Label(incorrect_medication_dosage_frame,
@@ -807,7 +879,8 @@ class PatientMedicationDetails(Frame):
 
     def remove_medication_from_ignore_dict(self, selected_medication: Medication):
         if self.patient_object.medications_to_ignore.__contains__(selected_medication.medication_name):
-            correct_dosage_medication: Medication = self.patient_object.medication_dict[selected_medication.medication_name]
+            correct_dosage_medication: Medication = self.patient_object.medication_dict[
+                selected_medication.medication_name]
             self.patient_object.remove_medication_from_ignore_dict(selected_medication, correct_dosage_medication)
             scriptScanner.save_collected_patients(self.master.collected_patients)
             scriptScanner.update_current_prns_and_ignored_medications(self.patient_object,
@@ -871,6 +944,7 @@ class LinkMedication(Toplevel):
     def __init__(self, parent, patient: PillpackPatient,
                  medication: Medication, master: App):
         super().__init__(parent)
+        self.attributes('-topmost', 'true')
         self.missing_medications_tree = Treeview(self,
                                                  columns='Dosage',
                                                  height=10)
@@ -911,6 +985,7 @@ class LinkMedication(Toplevel):
             if medication.medication_name == selected_medication:
                 selected_medication_object: Medication = medication
                 confirmation_box = Toplevel(self)
+                confirmation_box.attributes('-topmost', 'true')
                 confirmation_box.geometry("600x400")
                 confirmation_label = Label(confirmation_box, text="You are about to link "
                                                                   + self.linking_medication.medication_name
@@ -951,6 +1026,7 @@ class UnlinkMedication(Toplevel):
     def __init__(self, parent, patient: PillpackPatient,
                  medication_key: str, master: App):
         super().__init__(parent)
+        self.attributes('-topmost', 'true')
         self.selected_patient: PillpackPatient = patient
         self.medication_key_to_be_unlinked: str = medication_key
         if self.selected_patient.linked_medications[medication_key] is not None:
@@ -975,7 +1051,8 @@ class UnlinkMedication(Toplevel):
 
     def unlink_medication(self):
         if self.selected_patient.matched_medications_dict.__contains__(self.medication_key_to_be_unlinked):
-            medication_in_key: Medication = self.selected_patient.matched_medications_dict[self.medication_key_to_be_unlinked]
+            medication_in_key: Medication = self.selected_patient.matched_medications_dict[
+                self.medication_key_to_be_unlinked]
             self.selected_patient.remove_medication_link(medication_in_key)
             scriptScanner.save_collected_patients(self.application.collected_patients)
             scriptScanner.update_current_prns_and_ignored_medications(self.selected_patient,
@@ -1018,6 +1095,7 @@ class ToolTip(object):
 class ScanScripts(Toplevel):
     def __init__(self, parent, master: App):
         super().__init__(parent)
+        self.attributes('-topmost', 'true')
         warning_image_path = icons_dir + "\\warning.png"
         warning_image = PhotoImage(file=warning_image_path)
         self.warning_image = warning_image.subsample(40, 40)
@@ -1085,6 +1163,7 @@ class ScanScripts(Toplevel):
             self.__iterate_patients(application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
         else:
             warning = Toplevel(master=self.master)
+            warning.attributes('-topmost', 'true')
             warning.geometry("400x200")
             warning_label = Label(warning, text="Failed to interpret script XML...",
                                   wraplength=300)
@@ -1132,7 +1211,8 @@ class ScanScripts(Toplevel):
             first_name = item.split(" ")[0]
             last_name = item.split(" ")[1]
             if self.main_application.collected_patients.pillpack_patient_dict.__contains__(last_name.lower()):
-                list_of_patients: list = self.main_application.collected_patients.pillpack_patient_dict.get(last_name.lower())
+                list_of_patients: list = self.main_application.collected_patients.pillpack_patient_dict.get(
+                    last_name.lower())
                 for patient in list_of_patients:
                     if isinstance(patient, PillpackPatient):
                         if patient.first_name.lower() == first_name.lower():
@@ -1156,6 +1236,7 @@ def display_warning_if_pillpack_data_is_not_empty(application: App, function, wa
 
 def display_warning(application: App, function, warning_text: str):
     warning = Toplevel(master=application)
+    warning.attributes('-topmost', 'true')
     warning.geometry("300x240")
     warning_label = Label(warning, text=warning_text,
                           wraplength=200)
@@ -1171,6 +1252,7 @@ def display_warning(application: App, function, warning_text: str):
 
 def confirm_production_archival(application: App, home_screen: HomeScreen = None):
     warning = Toplevel(master=application)
+    warning.attributes('-topmost', 'true')
     warning.geometry("400x200")
     warning_label = Label(warning, text="Warning: Archiving this production will PERMENANTLY archive "
                                         "all working data. This means you will not be able to make any more "
@@ -1235,7 +1317,8 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pi
          typing.cast(PillpackPatient, entity).first_name.lower() == patient_to_be_matched.first_name.lower(),
          pillpack_patients)
     )
-    matching_pillpack_patient: PillpackPatient = pillpack_patients[0] if (len(pillpack_patients) > 0) else patient_to_be_matched
+    matching_pillpack_patient: PillpackPatient = pillpack_patients[0] if (
+                len(pillpack_patients) > 0) else patient_to_be_matched
     return matching_pillpack_patient
 
 
@@ -1253,6 +1336,13 @@ def archive_pillpack_production_dialog(home_screen: HomeScreen = None):
     archive_pillpack_production(archive_file)
     if home_screen is not None:
         home_screen.threaded_production_data_retrieval()
+
+
+def set_pillpack_production_directory():
+    directory = filedialog.askdirectory()
+    directory = directory.replace("/", "\\")
+    pillpackData.__modify_pillpack_location(directory)
+    pillpackData.config = pillpackData.__load_settings()
 
 
 app = App()
