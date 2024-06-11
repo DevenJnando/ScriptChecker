@@ -29,6 +29,8 @@ consts.MISSING_MEDICATIONS_STRING = "Missing Medications"
 consts.MISSING_MEDICATIONS_CODE = 2
 consts.DO_NOT_PRODUCE_STRING = "Do not produce"
 consts.DO_NOT_PRODUCE_CODE = 3
+consts.MANUALLY_CHECKED_STRING = "Manually Checked"
+consts.MANUALLY_CHECKED_CODE = 4
 
 warning_constants = types.SimpleNamespace()
 warning_constants.PILLPACK_DATA_OVERWRITE_WARNING = "WARNING: You already have a pillpack production dataset open! " \
@@ -406,7 +408,8 @@ class HomeScreen(Frame):
                                                            consts.READY_TO_PRODUCE_STRING,
                                                            consts.MISSING_MEDICATIONS_STRING,
                                                            consts.DO_NOT_PRODUCE_STRING,
-                                                           consts.NOTHING_TO_COMPARE_STRING
+                                                           consts.NOTHING_TO_COMPARE_STRING,
+                                                           consts.MANUALLY_CHECKED_STRING
                                                            ]
                                                    )
             filter_combobox.bind("<<ComboboxSelected>>",
@@ -455,9 +458,9 @@ class HomeScreen(Frame):
                         else:
                             tree_to_refresh.set(key, 'Date of Birth', matching_pillpack_patient.date_of_birth)
                         tree_to_refresh.set(key, 'No. of Medications', len(matching_pillpack_patient.medication_dict))
-                        if matching_pillpack_patient.do_not_produce_flag:
-                            tree_to_refresh.set(key, 'Condition', "Changes required")
-                            tree_to_refresh.item(key, image=self.do_not_produce_image)
+                        if matching_pillpack_patient.manually_checked_flag:
+                            tree_to_refresh.set(key, 'Condition', "Manually Checked")
+                            tree_to_refresh.item(key, image=self.ready_to_produce_image)
                         else:
                             if len(matching_pillpack_patient.incorrect_dosages_dict) > 0:
                                 tree_to_refresh.set(key, 'Condition', "Incorrect dosages")
@@ -528,6 +531,9 @@ class HomeScreen(Frame):
             case consts.READY_TO_PRODUCE_STRING:
                 self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
                 self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.READY_TO_PRODUCE_CODE)
+            case consts.MANUALLY_CHECKED_STRING:
+                self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
+                self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.MANUALLY_CHECKED_CODE)
 
     def on_treeview_double_click(self, tree_to_select_from: Treeview):
         if isinstance(tree_to_select_from, Treeview):
@@ -639,10 +645,10 @@ class PatientMedicationDetails(Frame):
         patient_name_label = Label(self.display_frame, font=self.font,
                                    text=self.patient_tree_key)
         patient_name_label.grid(row=0, column=0)
-        changes_toggle_label = Label(self.display_frame, font=self.font,
-                                     text="Toggle Changes", wraplength=300)
-        self.changes_toggle_button = Button(self.display_frame, command=self._on_changes_button_click)
-        changes_toggle_label.grid(row=1, column=1)
+        manually_checked_toggle_label = Label(self.display_frame, font=self.font,
+                                     text="Scripts Checked Manually", wraplength=300)
+        self.changes_toggle_button = Button(self.display_frame, command=self._on_manually_checked_button_click)
+        manually_checked_toggle_label.grid(row=1, column=1)
         self.changes_toggle_button.grid(row=1, column=2)
 
         self.production_medication_frame = LabelFrame(self.display_frame)
@@ -680,15 +686,15 @@ class PatientMedicationDetails(Frame):
     def _on_mousewheel(self, event):
         self.display_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-    def _on_changes_button_click(self):
-        self.patient_object.do_not_produce(not self.patient_object.do_not_produce_flag)
+    def _on_manually_checked_button_click(self):
+        self.patient_object.manually_checked(not self.patient_object.manually_checked_flag)
         self.master.app_observer.update_all()
 
     def _refresh_patient_status(self):
         self.patient_object.determine_ready_to_produce_code()
 
     def check_if_patient_is_ready_for_production(self):
-        if self.patient_object.do_not_produce_flag:
+        if self.patient_object.manually_checked_flag:
             on_button_path = icons_dir + "\\on-button.png"
             on_button_image = PhotoImage(file=on_button_path)
             self.change_toggle_button_image = on_button_image.subsample(10, 10)
@@ -728,6 +734,13 @@ class PatientMedicationDetails(Frame):
                 do_not_produce_label = Label(self.display_frame, font=self.font,
                                              image=self.do_not_produce_image)
                 do_not_produce_label.grid(row=0, column=1)
+            case consts.MANUALLY_CHECKED_CODE:
+                ready_to_produce_path = icons_dir + "\\check.png"
+                ready_to_produce_image = PhotoImage(file=ready_to_produce_path)
+                self.ready_to_produce_image = ready_to_produce_image.subsample(5, 5)
+                ready_to_produce_label = Label(self.display_frame, font=self.font,
+                                               image=self.ready_to_produce_image, text="Proceed with caution")
+                ready_to_produce_label.grid(row=0, column=1)
 
     def populate_label_frame(self, label_frame_to_populate: LabelFrame, frame_title: str,
                              row_number: int, dictionary_to_iterate: dict,

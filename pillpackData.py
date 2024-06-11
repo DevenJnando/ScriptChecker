@@ -16,6 +16,7 @@ consts.READY_TO_PRODUCE_CODE = 0
 consts.NOTHING_TO_COMPARE = 1
 consts.MISSING_MEDICATIONS = 2
 consts.DO_NOT_PRODUCE = 3
+consts.MANUALLY_CHECKED = 4
 consts.PRN_KEY = "prns_dict"
 consts.LINKED_MEDS_KEY = "linked_meds_dict"
 consts.COLLECTED_PATIENTS_FILE = 'Patients.pk1'
@@ -44,7 +45,7 @@ class PillpackPatient:
         self.first_name: str = first_name
         self.last_name: str = last_name
         self.date_of_birth: datetime.date = date_of_birth
-        self.do_not_produce_flag: bool = False
+        self.manually_checked_flag: bool = False
         self.ready_to_produce_code: int = 0
         self.medication_dict: dict = {}
         self.matched_medications_dict: dict = {}
@@ -55,15 +56,11 @@ class PillpackPatient:
         self.medications_to_ignore: dict = {}
         self.linked_medications: dict = {}
 
-    def do_not_produce(self, do_not_produce: bool):
-        self.do_not_produce_flag = do_not_produce
-
-    def set_ready_to_produce_code(self, ready_to_produce_code: int):
-        if 3 > ready_to_produce_code > 0:
-            self.ready_to_produce_code = ready_to_produce_code
+    def manually_checked(self, manually_checked: bool):
+        self.manually_checked_flag = manually_checked
 
     def determine_ready_to_produce_code(self):
-        if not self.do_not_produce_flag:
+        if not self.manually_checked_flag:
             if len(self.unknown_medications_dict) > 0:
                 self.ready_to_produce_code = consts.DO_NOT_PRODUCE
             elif len(self.incorrect_dosages_dict) > 0:
@@ -75,7 +72,7 @@ class PillpackPatient:
             else:
                 self.ready_to_produce_code = consts.NOTHING_TO_COMPARE
         else:
-            self.ready_to_produce_code = consts.DO_NOT_PRODUCE
+            self.ready_to_produce_code = consts.MANUALLY_CHECKED
 
     @staticmethod
     def __add_to_dict_of_medications(medication_to_add: Medication, dict_to_add_to: dict):
