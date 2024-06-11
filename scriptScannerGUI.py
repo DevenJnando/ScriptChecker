@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 import threading
 import tkinter
@@ -44,7 +45,11 @@ bookmark_constants.PERFECTLY_MATCHED_PATIENTS_VIEW = 1
 bookmark_constants.MINOR_MISMATCH_PATIENTS_VIEW = 2
 bookmark_constants.SEVERE_MISMATCH_PATIENTS_VIEW = 3
 
-script_dir = sys.path[0]
+if getattr(sys, 'frozen', False):
+    script_dir = sys._MEIPASS
+else:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
 resources_dir = script_dir + "\\Resources"
 icons_dir = resources_dir + "\\icons"
 themes_dir = resources_dir + "\\themes"
@@ -753,7 +758,7 @@ class PatientMedicationDetails(Frame):
                     link_icon_label = Label(label_frame_to_populate, image=self.linked_medication_image)
                     link_icon_label.grid(row=i + 1, column=2)
                     unlink_button = Button(label_frame_to_populate, text="Unlink",
-                                           command=lambda: self.open_unlink_medication_view(medication.medication_name))
+                                           command=lambda e=medication: self.open_unlink_medication_view(e.medication_name))
                     unlink_button.grid(row=i + 1, column=3)
                     create_tool_tip(link_icon_label, text=linked_medication.medication_name)
                 if include_prn_medications_button:

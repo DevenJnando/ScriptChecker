@@ -163,12 +163,20 @@ class PillpackPatient:
 
 
 def __load_settings():
-    return yaml.safe_load(open(sys.path[0] + "\\settings.yaml"))
+    if getattr(sys, 'frozen', False):
+        application_path = sys._MEIPASS
+    else:
+        application_path = os.path.dirname(os.path.abspath(__file__))
+    return yaml.safe_load(open(application_path + "\\settings.yaml"))
 
 
 def __modify_pillpack_location(new_location: str):
     location_json = {"pillpackDataLocation": new_location}
-    with open(sys.path[0] + "\\settings.yaml", 'w') as file:
+    if getattr(sys, 'frozen', False):
+        application_path = sys._MEIPASS
+    else:
+        application_path = os.path.dirname(os.path.abspath(__file__))
+    with open(application_path + "\\settings.yaml", 'w') as file:
         yaml.dump(location_json, file, sort_keys=False)
 
 
