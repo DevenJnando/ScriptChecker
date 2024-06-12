@@ -271,13 +271,15 @@ class HomeScreen(Frame):
         self.columns = ('First Name',
                         'Last Name',
                         'Date of Birth',
+                        'Start Date',
                         'No. of Medications',
                         'Condition')
 
         self.production_patients_tree = Treeview(self.production_patients_results,
                                                  columns=self.columns,
                                                  height=10)
-        self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        calibrate_width(self.production_patients_tree, self.columns)
+        self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detached_production_patient_nodes: list = []
         self.list_of_trees.append([self.production_patients_tree,
                                    self.production_patients_results,
@@ -290,7 +292,8 @@ class HomeScreen(Frame):
         self.perfect_patients_tree = Treeview(self.perfect_match_patients,
                                               columns=self.columns,
                                               height=10)
-        self.perfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        calibrate_width(self.perfect_patients_tree, self.columns)
+        self.perfect_patients_tree["displaycolumns"] = ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detached_perfect_patient_nodes: list = []
         self.list_of_trees.append([self.perfect_patients_tree,
                                    self.perfect_match_patients,
@@ -303,7 +306,8 @@ class HomeScreen(Frame):
         self.imperfect_patients_tree = Treeview(self.minor_mismatch_patients,
                                                 columns=self.columns,
                                                 height=10)
-        self.imperfect_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        calibrate_width(self.imperfect_patients_tree, self.columns)
+        self.imperfect_patients_tree["displaycolumns"] = ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detached_imperfect_patient_nodes: list = []
         self.list_of_trees.append([self.imperfect_patients_tree,
                                    self.minor_mismatch_patients,
@@ -316,8 +320,8 @@ class HomeScreen(Frame):
         self.mismatched_patients_tree = Treeview(self.severe_mismatch_patients,
                                                  columns=self.columns,
                                                  height=10)
-
-        self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'No. of Medications', 'Condition')
+        calibrate_width(self.mismatched_patients_tree, self.columns)
+        self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detatched_mismatched_patient_nodes = []
         self.list_of_trees.append([self.mismatched_patients_tree,
                                    self.severe_mismatch_patients,
@@ -355,6 +359,7 @@ class HomeScreen(Frame):
             tree.set(key, 'First Name', "Loading...")
             tree.set(key, 'Last Name', "Loading...")
             tree.set(key, 'Date of Birth', "Loading...")
+            tree.set(key, 'Start Date', "Loading...")
             tree.set(key, 'No. of Medications', "Loading...")
             tree.set(key, 'Condition', "Loading...")
 
@@ -457,6 +462,10 @@ class HomeScreen(Frame):
                             tree_to_refresh.set(key, 'Date of Birth', "Not provided...")
                         else:
                             tree_to_refresh.set(key, 'Date of Birth', matching_pillpack_patient.date_of_birth)
+                        if matching_pillpack_patient.start_date == datetime.date.today():
+                            tree_to_refresh.set(key, 'Start Date', matching_pillpack_patient.start_date + "URGENT")
+                        else:
+                            tree_to_refresh.set(key, 'Start Date', matching_pillpack_patient.start_date)
                         tree_to_refresh.set(key, 'No. of Medications', len(matching_pillpack_patient.medication_dict))
                         if matching_pillpack_patient.manually_checked_flag:
                             tree_to_refresh.set(key, 'Condition', "Manually Checked")
@@ -643,10 +652,11 @@ class PatientMedicationDetails(Frame):
         self.display_frame = tkinter.ttk.Frame(self.display_canvas, width=2000)
 
         patient_name_label = Label(self.display_frame, font=self.font,
-                                   text=self.patient_tree_key)
+                                   text=self.patient_tree_key + " (Start Date: " +
+                                   str(self.patient_object.start_date) + ")")
         patient_name_label.grid(row=0, column=0)
         manually_checked_toggle_label = Label(self.display_frame, font=self.font,
-                                     text="Scripts Checked Manually", wraplength=300)
+                                              text="Scripts Checked Manually", wraplength=300)
         self.changes_toggle_button = Button(self.display_frame, command=self._on_manually_checked_button_click)
         manually_checked_toggle_label.grid(row=1, column=1)
         self.changes_toggle_button.grid(row=1, column=2)
@@ -1322,6 +1332,11 @@ def create_tool_tip(widget, text):
 
     widget.bind('<Enter>', enter)
     widget.bind('<Leave>', leave)
+
+
+def calibrate_width(tree_to_calibrate: Treeview, columns: tuple):
+    for column in columns:
+        tree_to_calibrate.column(column, width=150)
 
 
 def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pillpack_patient_dict: dict):

@@ -24,9 +24,10 @@ consts.PRNS_AND_IGNORED_MEDICATIONS_FILE = 'PrnsAndIgnoredMeds.pk1'
 
 
 class Medication:
-    def __init__(self, medication_name: str, dosage: float):
+    def __init__(self, medication_name: str, dosage: float, start_date: datetime):
         self.medication_name: str = medication_name
         self.dosage: float = dosage
+        self.start_date: datetime = start_date
 
     def equals(self, comparator):
         if isinstance(comparator, Medication):
@@ -45,6 +46,7 @@ class PillpackPatient:
         self.first_name: str = first_name
         self.last_name: str = last_name
         self.date_of_birth: datetime.date = date_of_birth
+        self.start_date: datetime = datetime.date.today()
         self.manually_checked_flag: bool = False
         self.ready_to_produce_code: int = 0
         self.medication_dict: dict = {}
@@ -58,6 +60,9 @@ class PillpackPatient:
 
     def manually_checked(self, manually_checked: bool):
         self.manually_checked_flag = manually_checked
+
+    def set_start_date(self, start_date: datetime):
+        self.start_date = start_date
 
     def determine_ready_to_produce_code(self):
         if not self.manually_checked_flag:
@@ -236,6 +241,9 @@ def __generate_medication_dict(medication_element):
         number_of_days_to_take = list_of_dosages.length
         dosage_list = list_of_dosages[0].getElementsByTagName("DoseList")[0]
         dosage_list_value = dosage_list.firstChild.nodeValue if dosage_list.hasChildNodes() else ""
+        start_date = list_of_dosages[0].getElementsByTagName("TakeDt")[0]
+        start_date_value = start_date.firstChild.nodeValue if start_date.hasChildNodes() else ""
+        start_date_final = __create_datetime(start_date_value)
         trimmed_dosage_list = list(filter(lambda entity: entity != "", dosage_list_value.split(";")))
         final_dosage: float = -1
         try:
@@ -243,11 +251,21 @@ def __generate_medication_dict(medication_element):
         except ValueError as e:
             print("ValueError: ", e)
         total_dosage = number_of_days_to_take * final_dosage
-        medication_object: Medication = Medication(medication_name, total_dosage)
+        medication_object: Medication = Medication(medication_name, total_dosage, start_date_final)
         return medication_object
     else:
         print("The medication parameter: ", medication_element, " is not a valid XML element.")
         return
+
+
+def __create_datetime(date_string: str):
+    date = datetime.date.today()
+    try:
+        date = datetime.date.fromisoformat(date_string)
+    except ValueError as e:
+        print("date could not be read from given string: ", date_string, e)
+    finally:
+        return date
 
 
 def __create_patient_object(order_element):
@@ -261,19 +279,18 @@ def __create_patient_object(order_element):
         patient_dob_string: str = patient_dob_element.firstChild.nodeValue if patient_dob_element.hasChildNodes() else ""
         patient_dob_string = patient_dob_string[:4] + "-" + patient_dob_string[4:] if patient_dob_string != "" else ""
         patient_dob_string = patient_dob_string[:7] + "-" + patient_dob_string[7:] if patient_dob_string != "" else ""
-        patient_dob = datetime.date.today()
-        try:
-            patient_dob = datetime.date.fromisoformat(patient_dob_string)
-        except ValueError as e:
-            print("Date of birth could not be read from given string: ", patient_dob_string, e)
-        finally:
-            patient_object = PillpackPatient(patient_first_name, patient_last_name, patient_dob)
+        patient_dob = __create_datetime(patient_dob_string)
+        patient_object = PillpackPatient(patient_first_name, patient_last_name, patient_dob)
         medication_items: list = order_element.getElementsByTagName("MedItem")
+        start_date_list: list = []
         for medication in medication_items:
             medication_object = __generate_medication_dict(medication)
+            start_date_list.append(medication_object.start_date)
             if isinstance(medication_object, Medication):
                 __update_medication_dosage(patient_object, medication_object)
                 patient_object.add_medication_to_dict(medication_object)
+        patient_object.set_start_date(min(start_date_list))
+        print(patient_object.first_name, " ", patient_object.last_name, " ", patient_object.start_date)
         return patient_object
     else:
         print("The order parameter: ", order_element, " is not a valid XML element.")
