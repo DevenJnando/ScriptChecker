@@ -91,7 +91,7 @@ def load_pillpack_data(prns_and_ignored_medications: dict):
 def extract_medicine_data(medicine_element: minidom.Element):
     medicine_name_on_script = medicine_element.getAttribute("d")
     medicine_dosage_on_script = medicine_element.getAttribute("q")
-    medication: Medication = Medication(medicine_name_on_script, float(medicine_dosage_on_script))
+    medication: Medication = Medication(medicine_name_on_script, float(medicine_dosage_on_script), datetime.date.today())
     return medication
 
 
@@ -241,7 +241,6 @@ def check_if_patient_is_in_pillpack_production(pillpack_patient_dict: dict,
                 collected_patients.add_minor_mismatched_patient(patient)
         elif isinstance(matched_patient, list) and len(matched_patient) == 0:
             collected_patients.add_patient(script_patient, consts.NO_MATCH)
-            script_patient.do_not_produce(True)
             script_patient.ready_to_produce_code = 3
             for medication in list(script_patient.medication_dict.values()):
                 script_patient.add_unknown_medication_to_dict(medication)

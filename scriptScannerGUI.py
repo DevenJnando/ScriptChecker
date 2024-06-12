@@ -463,7 +463,7 @@ class HomeScreen(Frame):
                         else:
                             tree_to_refresh.set(key, 'Date of Birth', matching_pillpack_patient.date_of_birth)
                         if matching_pillpack_patient.start_date == datetime.date.today():
-                            tree_to_refresh.set(key, 'Start Date', matching_pillpack_patient.start_date + "URGENT")
+                            tree_to_refresh.set(key, 'Start Date', str(matching_pillpack_patient.start_date) + " URGENT")
                         else:
                             tree_to_refresh.set(key, 'Start Date', matching_pillpack_patient.start_date)
                         tree_to_refresh.set(key, 'No. of Medications', len(matching_pillpack_patient.medication_dict))
