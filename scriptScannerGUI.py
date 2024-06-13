@@ -430,7 +430,7 @@ class HomeScreen(Frame):
                                   )
             search_bar_label = Label(results_location, font=self.font, text="Search: ")
             search_bar = Entry(results_location, width=50, textvariable=search_variable)
-            scrollbar = Scrollbar(results_location, orient='vertical',
+            scrollbar = tkinter.ttk.Scrollbar(results_location, orient='vertical',
                                   command=tree.yview)
             tree.configure(yscrollcommand=scrollbar.set)
             filter_label.grid(row=0, column=0)
