@@ -290,7 +290,6 @@ def __create_patient_object(order_element):
                 __update_medication_dosage(patient_object, medication_object)
                 patient_object.add_medication_to_dict(medication_object)
         patient_object.set_start_date(min(start_date_list))
-        print(patient_object.first_name, " ", patient_object.last_name, " ", patient_object.start_date)
         return patient_object
     else:
         print("The order parameter: ", order_element, " is not a valid XML element.")
