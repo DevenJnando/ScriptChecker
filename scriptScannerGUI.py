@@ -280,7 +280,8 @@ class HomeScreen(Frame):
                                                  columns=self.columns,
                                                  height=10)
         calibrate_width(self.production_patients_tree, self.columns, 125)
-        self.production_patients_tree["displaycolumns"] = ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+        self.production_patients_tree["displaycolumns"] = (
+        'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detached_production_patient_nodes: list = []
         self.list_of_trees.append([self.production_patients_tree,
                                    self.production_patients_results,
@@ -296,7 +297,8 @@ class HomeScreen(Frame):
                                               columns=self.columns,
                                               height=10)
         calibrate_width(self.perfect_patients_tree, self.columns, 125)
-        self.perfect_patients_tree["displaycolumns"] = ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+        self.perfect_patients_tree["displaycolumns"] = (
+        'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detached_perfect_patient_nodes: list = []
         self.list_of_trees.append([self.perfect_patients_tree,
                                    self.perfect_match_patients,
@@ -312,7 +314,8 @@ class HomeScreen(Frame):
                                                 columns=self.columns,
                                                 height=10)
         calibrate_width(self.imperfect_patients_tree, self.columns, 125)
-        self.imperfect_patients_tree["displaycolumns"] = ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+        self.imperfect_patients_tree["displaycolumns"] = (
+        'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detached_imperfect_patient_nodes: list = []
         self.list_of_trees.append([self.imperfect_patients_tree,
                                    self.minor_mismatch_patients,
@@ -328,7 +331,8 @@ class HomeScreen(Frame):
                                                  columns=self.columns,
                                                  height=10)
         calibrate_width(self.mismatched_patients_tree, self.columns, 125)
-        self.mismatched_patients_tree["displaycolumns"] = ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+        self.mismatched_patients_tree["displaycolumns"] = (
+        'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detatched_mismatched_patient_nodes = []
         self.list_of_trees.append([self.mismatched_patients_tree,
                                    self.severe_mismatch_patients,
@@ -481,7 +485,8 @@ class HomeScreen(Frame):
                         else:
                             tree_to_refresh.set(key, 'Date of Birth', matching_pillpack_patient.date_of_birth)
                         if matching_pillpack_patient.start_date == datetime.date.today():
-                            tree_to_refresh.set(key, 'Start Date', str(matching_pillpack_patient.start_date) + " URGENT")
+                            tree_to_refresh.set(key, 'Start Date',
+                                                str(matching_pillpack_patient.start_date) + " URGENT")
                         else:
                             tree_to_refresh.set(key, 'Start Date', matching_pillpack_patient.start_date)
                         tree_to_refresh.set(key, 'No. of Medications', len(matching_pillpack_patient.medication_dict))
@@ -685,7 +690,7 @@ class PatientMedicationDetails(Frame):
 
         patient_name_label = Label(self.display_frame, font=self.font,
                                    text=self.patient_tree_key + " (Start Date: " +
-                                   str(self.patient_object.start_date) + ")")
+                                        str(self.patient_object.start_date) + ")")
         patient_name_label.grid(row=0, column=0)
         manually_checked_toggle_label = Label(self.display_frame, font=self.font,
                                               text="Scripts Checked Manually", wraplength=300)
@@ -813,7 +818,8 @@ class PatientMedicationDetails(Frame):
                     link_icon_label = Label(label_frame_to_populate, image=self.linked_medication_image)
                     link_icon_label.grid(row=i + 1, column=2)
                     unlink_button = Button(label_frame_to_populate, text="Unlink",
-                                           command=lambda e=medication: self.open_unlink_medication_view(e.medication_name))
+                                           command=lambda e=medication: self.open_unlink_medication_view(
+                                               e.medication_name))
                     unlink_button.grid(row=i + 1, column=3)
                     create_tool_tip(link_icon_label, text=linked_medication.medication_name)
                 if include_prn_medications_button:
@@ -1385,7 +1391,7 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pi
          pillpack_patients)
     )
     matching_pillpack_patient: PillpackPatient = pillpack_patients[0] if (
-                len(pillpack_patients) > 0) else patient_to_be_matched
+            len(pillpack_patients) > 0) else patient_to_be_matched
     return matching_pillpack_patient
 
 
@@ -1412,5 +1418,6 @@ def set_pillpack_production_directory():
     pillpackData.config = pillpackData.__load_settings()
 
 
-app = App()
-app.mainloop()
+if __name__ == '__main__':
+    app = App()
+    app.mainloop()
