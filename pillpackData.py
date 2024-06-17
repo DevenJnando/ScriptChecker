@@ -12,11 +12,11 @@ from zipfile import ZipFile
 import yaml
 
 consts = types.SimpleNamespace()
-consts.READY_TO_PRODUCE_CODE = 0
-consts.NOTHING_TO_COMPARE = 1
-consts.MISSING_MEDICATIONS = 2
-consts.DO_NOT_PRODUCE = 3
-consts.MANUALLY_CHECKED = 4
+consts.READY_TO_PRODUCE_CODE = 1
+consts.NOTHING_TO_COMPARE = 2
+consts.MISSING_MEDICATIONS = 3
+consts.DO_NOT_PRODUCE = 4
+consts.MANUALLY_CHECKED = 5
 consts.PRN_KEY = "prns_dict"
 consts.LINKED_MEDS_KEY = "linked_meds_dict"
 consts.COLLECTED_PATIENTS_FILE = 'Patients.pk1'

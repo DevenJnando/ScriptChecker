@@ -146,6 +146,7 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
                                                                              patient_from_production.linked_medications)
                 if linked_medication is not None:
                     patient_from_production.remove_missing_medication_from_dict(linked_medication)
+                    patient_from_production.remove_unknown_medication_from_dict(linked_medication)
                     patient_from_production.add_matched_medication_to_dict(script_medication_dict[medication])
                 elif (not patient_from_production.prn_medications_dict.__contains__(medication)
                       and not patient_from_production.medications_to_ignore.__contains__(medication)):
