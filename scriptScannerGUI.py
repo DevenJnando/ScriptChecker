@@ -432,9 +432,9 @@ class HomeScreen(Frame):
                                                    font=self.font,
                                                    values=[consts.SHOW_ALL_RESULTS_STRING,
                                                            consts.READY_TO_PRODUCE_STRING,
+                                                           consts.NOTHING_TO_COMPARE_STRING,
                                                            consts.MISSING_MEDICATIONS_STRING,
                                                            consts.DO_NOT_PRODUCE_STRING,
-                                                           consts.NOTHING_TO_COMPARE_STRING,
                                                            consts.MANUALLY_CHECKED_STRING
                                                            ]
                                                    )
@@ -735,6 +735,7 @@ class PatientMedicationDetails(Frame):
 
     def _on_manually_checked_button_click(self):
         self.patient_object.manually_checked(not self.patient_object.manually_checked_flag)
+        scriptScanner.save_collected_patients(self.master.collected_patients)
         self.master.app_observer.update_all()
 
     def _refresh_patient_status(self):
