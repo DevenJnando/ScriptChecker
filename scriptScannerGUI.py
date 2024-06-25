@@ -117,7 +117,6 @@ class App(tkinter.Tk):
         else:
             self.show_frame(consts.HOME_SCREEN)
 
-        self.bind("<Destroy>", self.shutdown)
         self.bind("<<WatchdogEvent>>", self.on_watchdog_event)
         self.filesystem_observer.start()
 
@@ -194,10 +193,6 @@ class App(tkinter.Tk):
     def notify(self, event):
         self.queue.put(event)
         self.event_generate("<<WatchdogEvent>>", when="tail")
-
-    def shutdown(self, event):
-        self.filesystem_observer.stop()
-        self.filesystem_observer.join()
 
 
 class WatchdogEventHandler(FileSystemEventHandler):
