@@ -341,6 +341,18 @@ def get_patient_medicine_data(prns_and_ignored_medications: dict):
         return dict_of_patients
 
 
+def get_patient_data_from_specific_file(prns_and_ignored_medications: dict, specified_file_name: str):
+    list_of_orders_raw_text = __sanitise_and_encode_text_from_file(specified_file_name)
+    list_of_orders: list = reduce(list.__add__, __parse_xml(list_of_orders_raw_text))
+    list_of_patients: list = []
+    for order in list_of_orders:
+        patient_object = __create_patient_object(order)
+        patient_object = retrieve_prns_and_ignored_medications(patient_object, prns_and_ignored_medications)
+        if isinstance(patient_object, PillpackPatient):
+            list_of_patients.append(patient_object)
+    return list_of_patients
+
+
 def retrieve_prns_and_ignored_medications(patient: PillpackPatient, prns_and_ignored_medications: dict):
     key = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
     if prns_and_ignored_medications.__contains__(key.lower()):

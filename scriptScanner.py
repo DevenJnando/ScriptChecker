@@ -59,14 +59,38 @@ class CollectedPatients:
     def add_severely_mismatched_patient(self, patient_to_add: PillpackPatient):
         self.__add_to_dict_of_patients(patient_to_add, self.severe_mismatch_patients)
 
-    def update_pillpack_patient_dict(self, patient_to_be_updated: PillpackPatient):
-        if self.pillpack_patient_dict.__contains__(patient_to_be_updated.last_name):
-            patients_with_last_name = self.pillpack_patient_dict.get(patient_to_be_updated.last_name)
+    @staticmethod
+    def __update_patient_dict(patient_dict: dict, patient_to_be_updated: PillpackPatient):
+        patient_is_updated = False
+        if patient_dict.__contains__(patient_to_be_updated.last_name.lower()):
+            patients_with_last_name: list = patient_dict.get(patient_to_be_updated.last_name.lower())
             for i in range(0, len(patients_with_last_name)):
                 patient: PillpackPatient = patients_with_last_name[i]
                 if patient.__eq__(patient_to_be_updated):
                     patients_with_last_name[i] = patient_to_be_updated
-                    self.pillpack_patient_dict[patient_to_be_updated.last_name] = patients_with_last_name
+                    patient_dict[patient_to_be_updated.last_name.lower()] = patients_with_last_name
+                    patient_is_updated = True
+        return patient_is_updated
+
+    def update_pillpack_patient_dict(self, patient_to_be_updated: PillpackPatient):
+        return self.__update_patient_dict(self.pillpack_patient_dict, patient_to_be_updated)
+
+    def update_matched_patients_dict(self, patient_to_be_updated: PillpackPatient):
+        return self.__update_patient_dict(self.matched_patients, patient_to_be_updated)
+
+    def update_minor_mismatched_patients_dict(self, patient_to_be_updated: PillpackPatient):
+        return self.__update_patient_dict(self.minor_mismatch_patients, patient_to_be_updated)
+
+    def update_severe_mismatched_patients_dict(self, patient_to_be_updated: PillpackPatient):
+        patient_is_updated = False
+        if self.pillpack_patient_dict.__contains__(patient_to_be_updated.last_name):
+            patients_with_last_name: list = self.pillpack_patient_dict.get(patient_to_be_updated.last_name)
+            for i in range(0, len(patients_with_last_name)):
+                patient: PillpackPatient = patients_with_last_name[i]
+                if patient.__eq__(patient_to_be_updated):
+                    patients_with_last_name.pop(i)
+                    patient_is_updated = True
+        return patient_is_updated
 
 
 def scan_script(raw_xml_text: str):

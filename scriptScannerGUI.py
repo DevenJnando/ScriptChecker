@@ -10,6 +10,10 @@ from tkinter.ttk import Treeview
 from tkinter import *
 from tkinter import font
 from tkinter import filedialog
+from multiprocessing import Queue
+
+from watchdog.observers import Observer as WatchdogObserver
+from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileCreatedEvent, FileModifiedEvent, FileMovedEvent
 
 import pillpackData
 from pillpackData import PillpackPatient, Medication, archive_pillpack_production
@@ -89,6 +93,11 @@ class Observer:
 class App(tkinter.Tk):
     def __init__(self):
         super().__init__()
+        path = pillpackData.config["pillpackDataLocation"]
+        handler = WatchdogEventHandler(self)
+        self.filesystem_observer = WatchdogObserver()
+        self.filesystem_observer.schedule(handler, path, recursive=False)
+        self.queue = Queue()
         self.style = tkinter.ttk.Style(self)
         self.tk.call("source", themes_dir + "\\" + "forest-dark.tcl")
         self.style.theme_use("forest-dark")
@@ -107,6 +116,10 @@ class App(tkinter.Tk):
             self.show_frame(consts.VIEW_PILLPACK_FOLDER_LOCATION)
         else:
             self.show_frame(consts.HOME_SCREEN)
+
+        self.bind("<Destroy>", self.shutdown)
+        self.bind("<<WatchdogEvent>>", self.on_watchdog_event)
+        self.filesystem_observer.start()
 
         # set_appearance_mode("dark")
 
@@ -149,6 +162,54 @@ class App(tkinter.Tk):
                     self.app_observer.connect(consts.VIEW_PILLPACK_FOLDER_LOCATION, frame)
                     frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
                 frame.tkraise()
+
+    def on_watchdog_event(self, event):
+        watchdog_event = self.queue.get()
+        full_path = ""
+        if isinstance(watchdog_event, FileCreatedEvent):
+            full_path = str(watchdog_event.src_path)
+        if isinstance(watchdog_event, FileMovedEvent):
+            full_path = str(watchdog_event.dest_path)
+        split_file_name = full_path.rsplit('\\')
+        file_name = split_file_name[len(split_file_name) - 1]
+        file_extension = full_path.rsplit('.')[1]
+        if file_extension == "ppc_processed":
+            list_of_patients = (pillpackData.get_patient_data_from_specific_file
+                                (self.loaded_prns_and_ignored_medications, file_name))
+            for patient in list_of_patients:
+                patient_exists: bool = self.collected_patients.update_pillpack_patient_dict(patient)
+                if not patient_exists:
+                    if self.collected_patients.pillpack_patient_dict.__contains__(patient.last_name.lower()):
+                        list_of_patients: list = (self.collected_patients
+                                                  .pillpack_patient_dict.get(patient.last_name.lower()))
+                        list_of_patients.append(patient)
+                        list_of_patients = list(dict.fromkeys(list_of_patients))
+                        self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
+                    else:
+                        list_of_patients: list = [patient]
+                        self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
+            scriptScanner.save_collected_patients(self.collected_patients)
+            self.app_observer.update_all()
+
+    def notify(self, event):
+        self.queue.put(event)
+        self.event_generate("<<WatchdogEvent>>", when="tail")
+
+    def shutdown(self, event):
+        self.filesystem_observer.stop()
+        self.filesystem_observer.join()
+
+
+class WatchdogEventHandler(FileSystemEventHandler):
+    def __init__(self, application: App):
+        FileSystemEventHandler.__init__(self)
+        self.app = application
+
+    def on_created(self, event: FileSystemEvent) -> None:
+        app.notify(event)
+
+    def on_moved(self, event: FileSystemEvent) -> None:
+        app.notify(event)
 
 
 class SideBar(Frame):
@@ -1398,8 +1459,7 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pi
 
 def populate_pillpack_production_data(application: App):
     application.collected_patients.set_pillpack_patient_dict(
-        scriptScanner.load_pillpack_data(application.loaded_prns_and_ignored_medications
-                                         )
+        scriptScanner.load_pillpack_data(application.loaded_prns_and_ignored_medications)
     )
     scriptScanner.save_collected_patients(application.collected_patients)
 
