@@ -206,10 +206,10 @@ class WatchdogEventHandler(FileSystemEventHandler):
         self.app = application
 
     def on_created(self, event: FileSystemEvent) -> None:
-        app.notify(event)
+        self.app.notify(event)
 
     def on_moved(self, event: FileSystemEvent) -> None:
-        app.notify(event)
+        self.app.notify(event)
 
 
 class SideBar(Frame):
