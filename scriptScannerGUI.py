@@ -1,23 +1,46 @@
-import datetime
-import os
+import logging
 import sys
-import threading
-import tkinter
-import types
-import typing
-from functools import reduce
-from tkinter.ttk import Treeview
-from tkinter import *
-from tkinter import font
-from tkinter import filedialog
-from multiprocessing import Queue
 
-from watchdog.observers import Observer as WatchdogObserver
-from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileCreatedEvent, FileModifiedEvent, FileMovedEvent
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
 
-import pillpackData
-from pillpackData import PillpackPatient, Medication, archive_pillpack_production
-import scriptScanner
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.DEBUG)
+stdout_handler.setFormatter(formatter)
+
+file_handler = logging.FileHandler('logs.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
+
+
+logger.addHandler(file_handler)
+logger.addHandler(stdout_handler)
+
+try:
+    import datetime
+    import os
+    import threading
+    import tkinter
+    import types
+    import typing
+    from functools import reduce
+    from tkinter.ttk import Treeview
+    from tkinter import *
+    from tkinter import font
+    from tkinter import filedialog
+    from multiprocessing import Queue
+
+    from watchdog.observers import Observer as WatchdogObserver
+    from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileCreatedEvent, FileMovedEvent
+
+    import pillpackData
+    from pillpackData import PillpackPatient, Medication, archive_pillpack_production
+    import scriptScanner
+except:
+    logger.exception('Import Exception!')
+    logger.exception(ImportError('Could not import one or more libraries.'))
+    exit(1)
 
 consts = types.SimpleNamespace()
 consts.UNSET_LOCATION = "Location not set"
@@ -53,7 +76,7 @@ bookmark_constants.MINOR_MISMATCH_PATIENTS_VIEW = 2
 bookmark_constants.SEVERE_MISMATCH_PATIENTS_VIEW = 3
 
 if getattr(sys, 'frozen', False):
-    script_dir = sys._MEIPASS
+    script_dir = os.path.dirname(sys.executable)
 else:
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -1475,5 +1498,11 @@ def set_pillpack_production_directory():
 
 
 if __name__ == '__main__':
-    app = App()
-    app.mainloop()
+    try:
+        app = App()
+        app.mainloop()
+        app.filesystem_observer.stop()
+        app.filesystem_observer.join()
+    except:
+        logger.error('Exception on main')
+        raise
