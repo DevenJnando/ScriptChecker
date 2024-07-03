@@ -34,6 +34,33 @@ class CollectedPatients:
             list_of_patients: list = [patient_to_add]
             dict_to_add_to[patient_to_add.last_name.lower()] = list_of_patients
 
+    @staticmethod
+    def __remove_from_dict_of_patients(patient_to_remove: PillpackPatient, dict_to_remove_from: dict):
+        if dict_to_remove_from.__contains__(patient_to_remove.last_name.lower()):
+            patients_with_last_name: list = dict_to_remove_from.get(patient_to_remove.last_name.lower())
+            for i in range(len(patients_with_last_name)):
+                patient = patients_with_last_name[i]
+                if isinstance(patient, PillpackPatient):
+                    print(patient.first_name, " ", patient_to_remove.first_name)
+                    if patient.__eq__(patient_to_remove):
+                        patients_with_last_name.pop(i)
+                        break
+            if len(patients_with_last_name) == 0:
+                dict_to_remove_from.pop(patient_to_remove.last_name.lower())
+
+    @staticmethod
+    def __update_patient_dict(patient_dict: dict, patient_to_be_updated: PillpackPatient):
+        patient_is_updated = False
+        if patient_dict.__contains__(patient_to_be_updated.last_name.lower()):
+            patients_with_last_name: list = patient_dict.get(patient_to_be_updated.last_name.lower())
+            for i in range(0, len(patients_with_last_name)):
+                patient: PillpackPatient = patients_with_last_name[i]
+                if patient.__eq__(patient_to_be_updated):
+                    patients_with_last_name[i] = patient_to_be_updated
+                    patient_dict[patient_to_be_updated.last_name.lower()] = patients_with_last_name
+                    patient_is_updated = True
+        return patient_is_updated
+
     def set_pillpack_patient_dict(self, patient_dict: dict):
         self.pillpack_patient_dict = patient_dict
 
@@ -59,18 +86,30 @@ class CollectedPatients:
     def add_severely_mismatched_patient(self, patient_to_add: PillpackPatient):
         self.__add_to_dict_of_patients(patient_to_add, self.severe_mismatch_patients)
 
-    @staticmethod
-    def __update_patient_dict(patient_dict: dict, patient_to_be_updated: PillpackPatient):
-        patient_is_updated = False
-        if patient_dict.__contains__(patient_to_be_updated.last_name.lower()):
-            patients_with_last_name: list = patient_dict.get(patient_to_be_updated.last_name.lower())
-            for i in range(0, len(patients_with_last_name)):
-                patient: PillpackPatient = patients_with_last_name[i]
-                if patient.__eq__(patient_to_be_updated):
-                    patients_with_last_name[i] = patient_to_be_updated
-                    patient_dict[patient_to_be_updated.last_name.lower()] = patients_with_last_name
-                    patient_is_updated = True
-        return patient_is_updated
+    def remove_patient(self, patient_to_remove: PillpackPatient):
+        if self.all_patients.__contains__(patient_to_remove.last_name.lower()):
+            patients_with_last_name: list = self.all_patients.get(patient_to_remove.last_name.lower())
+            for i in range(len(patients_with_last_name)):
+                patient = patients_with_last_name[i]["PatientObject"]
+                if isinstance(patient, PillpackPatient):
+                    print(patient.first_name, " ", patient_to_remove.first_name)
+                    if patient.__eq__(patient_to_remove):
+                        patients_with_last_name.pop(i)
+                        break
+            if len(patients_with_last_name) == 0:
+                self.all_patients.pop(patient_to_remove.last_name.lower())
+
+    def remove_pillpack_patient(self, patient_to_remove: PillpackPatient):
+        self.__remove_from_dict_of_patients(patient_to_remove, self.pillpack_patient_dict)
+
+    def remove_matched_patient(self, patient_to_remove: PillpackPatient):
+        self.__remove_from_dict_of_patients(patient_to_remove, self.matched_patients)
+
+    def remove_minor_mismatched_patient(self, patient_to_remove: PillpackPatient):
+        self.__remove_from_dict_of_patients(patient_to_remove, self.minor_mismatch_patients)
+
+    def remove_severely_mismatched_patient(self, patient_to_remove: PillpackPatient):
+        self.__remove_from_dict_of_patients(patient_to_remove, self.severe_mismatch_patients)
 
     def update_pillpack_patient_dict(self, patient_to_be_updated: PillpackPatient):
         return self.__update_patient_dict(self.pillpack_patient_dict, patient_to_be_updated)
@@ -215,8 +254,11 @@ def extend_existing_patient_medication_dict(patient_object: PillpackPatient, col
                 unwrapped_patient: PillpackPatient = patient_wrapper["PatientObject"]
                 match patient_wrapper["Status"]:
                     case consts.PERFECT_MATCH:
-                        if (unwrapped_patient.date_of_birth == patient_object.date_of_birth
-                                and unwrapped_patient.last_name == patient_object.last_name
+                        if unwrapped_patient.__eq__(patient_object):
+                            check_script_medications_against_pillpack(unwrapped_patient, patient_object, collected_patients)
+                            exists = True
+                            break
+                        elif (unwrapped_patient.last_name == patient_object.last_name
                                 and unwrapped_patient.first_name == patient_object.first_name):
                             check_script_medications_against_pillpack(unwrapped_patient, patient_object, collected_patients)
                             exists = True

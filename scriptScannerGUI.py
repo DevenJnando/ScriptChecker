@@ -210,6 +210,11 @@ class App(tkinter.Tk):
                     else:
                         list_of_patients: list = [patient]
                         self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
+                else:
+                    self.collected_patients.remove_patient(patient)
+                    self.collected_patients.remove_matched_patient(patient)
+                    self.collected_patients.remove_minor_mismatched_patient(patient)
+                    self.collected_patients.remove_severely_mismatched_patient(patient)
             scriptScanner.save_collected_patients(self.collected_patients)
             self.app_observer.update_all()
 
