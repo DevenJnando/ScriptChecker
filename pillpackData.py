@@ -10,6 +10,20 @@ import sys
 from zipfile import ZipFile
 
 import yaml
+import sys
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.DEBUG)
+stdout_handler.setFormatter(formatter)
+
+file_handler = logging.FileHandler('logs.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
 
 consts = types.SimpleNamespace()
 consts.READY_TO_PRODUCE_CODE = 1
@@ -83,11 +97,15 @@ class PillpackPatient:
     def __add_to_dict_of_medications(medication_to_add: Medication, dict_to_add_to: dict):
         if not dict_to_add_to.__contains__(medication_to_add.medication_name):
             dict_to_add_to[medication_to_add.medication_name] = medication_to_add
+            logging.info("Added medication {0} to dictionary {1}"
+                         .format(medication_to_add.medication_name, dict_to_add_to))
 
     @staticmethod
     def __remove_from_dict_of_medications(medication_to_remove: Medication, dict_to_remove_from: dict):
         if dict_to_remove_from.__contains__(medication_to_remove.medication_name):
             dict_to_remove_from.pop(medication_to_remove.medication_name)
+            logging.info("Removed medication {0} from dictionary {1}"
+                         .format(medication_to_remove.medication_name, dict_to_remove_from))
 
     def add_medication_to_dict(self, med_to_be_added: Medication):
         self.__add_to_dict_of_medications(med_to_be_added, self.medication_dict)
@@ -182,10 +200,6 @@ def __modify_pillpack_location(new_location: str):
         yaml.dump(location_json, file, sort_keys=False)
 
 
-config = __load_settings()
-patient_order_list: list
-
-
 def __scan_pillpack_folder(filepath: str):
     entities = scandir(filepath)
     return list(filter(lambda entity: entity.is_file() and entity.name.split(".")[1] == "ppc_processed", entities))
@@ -199,29 +213,43 @@ def __sanitise_and_encode_text_from_file(filename: str):
             raw_file = open(config["pillpackDataLocation"] + "\\" + filename, "rb")
             raw_binary = raw_file.read()
             raw_text = str(raw_binary)
+
+            # This is a really horrible hack...wraps the xml in tags
             trimmed_text = "<" + raw_text.split("<", 1)[1].rsplit(">\\n", 1)[0] + ">"
+
+            # Makes the content within the OrderInfo tags a bit more readable.
             sanitised_text = re.sub("</OrderInfo>.*?<OrderInfo>", "</OrderInfo>\n<OrderInfo>", trimmed_text,
                                     flags=re.DOTALL)
+
+            # For some reason, pillpack adds a bunch of garbage text before the start of the XML tag.
+            # This line removes all that crap so the XML can be interpreted correctly.
             sanitised_text = re.sub(r'^.*?<\?xml', "<?xml", sanitised_text)
             encoded_text = sanitised_text.encode('utf8').decode('unicode-escape')
+
+            # Splits each OrderInfo tag and sets each of them as an element in a list.
             list_of_strings = encoded_text.split("</OrderInfo>")
             for i in range(0, len(list_of_strings)):
                 string = list_of_strings[i]
                 if len(string) > 0:
+
+                    # Utterly awful, primitive way of adding the xml version + encoding if it doesn't exist in the
+                    # pillpack production file for some reason
                     if '<?xml version="1.0" encoding="utf-8"?>' not in string:
                         string = '<?xml version="1.0" encoding="utf-8"?>' + string
+
+                    # Ditto for the OrderInfo closing tags
                     if '</OrderInfo>' not in string:
                         string = string + '</OrderInfo>'
                     list_of_strings[i] = string
                 else:
                     list_of_strings.pop(i)
         except FileNotFoundError as e:
-            print("FileNotFoundError: ", e)
+            logging.error("File not found: {0}".format(e))
         finally:
             try:
                 raw_file.close()
             except AttributeError as e:
-                print("AttributeError: ", e)
+                logging.error("Attribute Error: {0}".format(e))
         return list_of_strings
 
 
@@ -229,32 +257,46 @@ def __remove_whitespace(node):
     if node.nodeType == minidom.Node.TEXT_NODE:
         if node.nodeValue.strip() == "":
             node.nodeValue = ""
+            logging.info("Removed whitespace from {0}".format(node))
     for child in node.childNodes:
+        logging.info("Recursively removing whitespace from {0}".format(child))
         __remove_whitespace(child)
 
 
 def __generate_medication_dict(medication_element):
     if isinstance(medication_element, minidom.Element):
+        # Only requires the first instance of a medicine name tag
         medications = medication_element.getElementsByTagName("MedNm")[0]
         medication_name = medications.firstChild.nodeValue if medications.hasChildNodes() else ""
+
+        # Since pillpack states each individual day that a medicine is to be taken, it is enough to just count the total
+        # number of MedItemDose tags and obtain the number of days this way
         list_of_dosages = medication_element.getElementsByTagName("MedItemDose")
         number_of_days_to_take = list_of_dosages.length
-        dosage_list = list_of_dosages[0].getElementsByTagName("DoseList")[0]
-        dosage_list_value = dosage_list.firstChild.nodeValue if dosage_list.hasChildNodes() else ""
+
+        # Only require the first instance of a medication start date
         start_date = list_of_dosages[0].getElementsByTagName("TakeDt")[0]
         start_date_value = start_date.firstChild.nodeValue if start_date.hasChildNodes() else ""
         start_date_final = __create_datetime(start_date_value)
+
+        # DoseList represents each moment in the day a medicine has to be taken; this is represented in the following
+        # format: Time_of_day:Dose - if there are multiple times in the day a medicine needs to be taken, then these
+        # will be separated by a semicolon, like this: ToD:Dose;AnotherToD:AnotherDose
+        dosage_list = list_of_dosages[0].getElementsByTagName("DoseList")[0]
+        dosage_list_value = dosage_list.firstChild.nodeValue if dosage_list.hasChildNodes() else ""
+
+        # Because of this, we need to split each dosage entry by semicolons
         trimmed_dosage_list = list(filter(lambda entity: entity != "", dosage_list_value.split(";")))
         final_dosage: float = -1
         try:
             final_dosage = sum([float(e.split(":")[1]) for e in trimmed_dosage_list])
         except ValueError as e:
-            print("ValueError: ", e)
+            logging.error("ValueError: {0}".format(e))
         total_dosage = number_of_days_to_take * final_dosage
         medication_object: Medication = Medication(medication_name, total_dosage, start_date_final)
         return medication_object
     else:
-        print("The medication parameter: ", medication_element, " is not a valid XML element.")
+        logging.error("The medication parameter: {0} is not a valid XML element.".format(medication_element))
         return
 
 
@@ -263,7 +305,7 @@ def __create_datetime(date_string: str):
     try:
         date = datetime.date.fromisoformat(date_string)
     except ValueError as e:
-        print("date could not be read from given string: ", date_string, e)
+        logging.error("Datetime could not be obtained from the given string: {0}".format(e))
     finally:
         return date
 
@@ -277,6 +319,9 @@ def __create_patient_object(order_element):
         patient_first_name: str = patient_full_name[1].strip() if len(patient_full_name) > 0 else ""
         patient_last_name: str = patient_full_name[0].strip() if len(patient_full_name) > 0 else ""
         patient_dob_string: str = patient_dob_element.firstChild.nodeValue if patient_dob_element.hasChildNodes() else ""
+
+        # There are no separators for day, month and year in the pillpack XML file, so these need to be added in
+        # manually
         patient_dob_string = patient_dob_string[:4] + "-" + patient_dob_string[4:] if patient_dob_string != "" else ""
         patient_dob_string = patient_dob_string[:7] + "-" + patient_dob_string[7:] if patient_dob_string != "" else ""
         patient_dob = __create_datetime(patient_dob_string)
@@ -289,11 +334,13 @@ def __create_patient_object(order_element):
             if isinstance(medication_object, Medication):
                 __update_medication_dosage(patient_object, medication_object)
                 patient_object.add_medication_to_dict(medication_object)
+
+        # Sets the start date for the patient's medication cycle as the earliest date relative to now.
         patient_object.set_start_date(min(start_date_list))
         return patient_object
     else:
-        print("The order parameter: ", order_element, " is not a valid XML element.")
-        print(order_element, " is of type: ", type(order_element))
+        logging.error("The order parameter: {0} is not a valid XML element. Actual type is {1}"
+                      .format(order_element, type(order_element)))
         return
 
 
@@ -305,10 +352,11 @@ def __parse_xml(list_of_orders_raw_text: list):
             __remove_whitespace(document)
             document.normalize()
             order_information.append(document.getElementsByTagName("OrderInfo"))
+            logging.info("Parsed order from XML file")
         except xml.parsers.expat.ExpatError as e:
-            print("ExpatError: ", e)
+            logging.error("Could not parse order from XML file: {0}".format(e))
         except TypeError as e:
-            print("TypeError: ", e)
+            logging.error("Could not parse order from XML file: {0}".format(e))
     return order_information
 
 
@@ -317,6 +365,8 @@ def __update_medication_dosage(patient_object: PillpackPatient, medication_objec
         medication_to_update: Medication = patient_object.medication_dict[medication_object.medication_name]
         medication_to_update.dosage = medication_to_update.dosage + medication_object.dosage
         patient_object.medication_dict[medication_object.medication_name] = medication_to_update
+        logging.info("Updated medication {0} dosage to {1}"
+                     .format(medication_to_update.medication_name, medication_to_update.dosage))
 
 
 def get_patient_medicine_data(prns_and_ignored_medications: dict):
@@ -368,5 +418,12 @@ def archive_pillpack_production(archive_file):
         with ZipFile(archive_file.name, 'w') as archived_production_data:
             for file in ppc_processed_files:
                 archived_production_data.write(pillpack_directory + file.name)
+                logging.info("Wrote file {0} to this production's archive".format(file.name))
                 os.remove(pillpack_directory + file.name)
+                logging.info("Removed file {0} from the pillpack directory {1}".format(file.name, pillpack_directory))
             os.remove(consts.COLLECTED_PATIENTS_FILE)
+            logging.info("Removed the pickle file of this production")
+
+
+config = __load_settings()
+patient_order_list: list

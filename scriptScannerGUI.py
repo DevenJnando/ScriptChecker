@@ -38,7 +38,6 @@ try:
     from pillpackData import PillpackPatient, Medication, archive_pillpack_production
     import scriptScanner
 except:
-    logger.exception('Import Exception!')
     logger.exception(ImportError('Could not import one or more libraries.'))
     exit(1)
 
@@ -77,8 +76,12 @@ bookmark_constants.SEVERE_MISMATCH_PATIENTS_VIEW = 3
 
 if getattr(sys, 'frozen', False):
     script_dir = os.path.dirname(sys.executable)
+    logging.info("Script is running as a frozen executable at the following location: {0}"
+                 .format(os.path.dirname(sys.executable)))
 else:
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    logging.info("Script is running on the python interpreter at the following location: {0}"
+                 .format(os.path.dirname(os.path.abspath(__file__))))
 
 resources_dir = script_dir + "\\Resources"
 icons_dir = resources_dir + "\\icons"
@@ -93,13 +96,16 @@ class Observer:
     def connect(self, view_name: str, view_to_connect: Frame):
         if not self.connected_views.__contains__(view_name):
             self.connected_views[view_name] = view_to_connect
+            logging.info("Connected view: {0} to the application observer.".format(view_name))
 
     def disconnect(self, view_name: str):
         if self.connected_views.__contains__(view_name):
             self.connected_views.pop(view_name)
+            logging.info("Disconnected view: {0} from the application observer.".format(view_name))
 
     def clear(self):
         self.connected_views.clear()
+        logging.info("Cleared all views from application observer.")
 
     def update(self, key_of_view_to_update):
         if self.connected_views.__contains__(key_of_view_to_update):
@@ -107,6 +113,15 @@ class Observer:
             update_method = getattr(view_object, "update", None)
             if callable(update_method):
                 view_object.update()
+                logging.info("The update method in the specified view ({0}) "
+                             "was called successfully.".format(view_object))
+            else:
+                logging.error("The update method in the specified view ({0}) "
+                              "could not be called because the update method is not callable."
+                              .format(view_object))
+        else:
+            logging.warning("No view with the key: {0} is currently connected to the application observer."
+                            .format(key_of_view_to_update))
 
     def update_all(self):
         for view_key in self.connected_views.keys():
@@ -154,36 +169,57 @@ class App(tkinter.Tk):
                         self.app_observer.connected_views[patient_view_name].grid_remove()
                         self.app_observer.disconnect(patient_view_name)
                         patient_view.display_canvas.unbind_all("<MouseWheel>")
+                        logging.info("Unbound mouse wheel from patient view {0}".format(patient_view_name))
                         patient_view.grid_remove()
+                        logging.info("Disconnected patient view {0} from the application grid"
+                                     .format(patient_view_name))
                         patient_view.destroy()
+                        logging.info("Destroyed patient view {0}".format(patient_view_name))
+                    else:
+                        logging.warning("The view {0} was not of type PatientMedicationDetails"
+                                        .format(patient_view_name))
                 if self.app_observer.connected_views.__contains__(view_name):
                     frame: HomeScreen = self.app_observer.connected_views[view_name]
+                    logging.info("Accessed home screen view {0} from application observer.".format(view_name))
                 else:
                     frame: HomeScreen = HomeScreen(parent=self.container, master=self)
+                    logging.info("No home screen view connected to application observer. "
+                                 "A new home screen frame has been created.")
                     self.app_observer.connect(view_name, frame)
                     frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
                 frame.tkraise()
+                logging.info("Home screen view is now the current view.")
             case consts.VIEW_PATIENT_SCREEN:
                 if isinstance(patient_to_view, PillpackPatient):
                     key = view_name + patient_to_view.first_name + patient_to_view.last_name
                     if self.app_observer.connected_views.__contains__(key):
                         frame: PatientMedicationDetails = self.app_observer.connected_views[key]
+                        logging.info("Accessed patient view {0} from application observer.".format(key))
                     else:
                         frame: PatientMedicationDetails = PatientMedicationDetails(parent=self.container, master=self,
                                                                                    patient=patient_to_view)
+                        logging.info("No patient view connected to application observer. "
+                                     "A new patient view has been created.")
                         self.app_observer.connect(key, frame)
                         frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
                     frame.tkraise()
+                    logging.info("Patient view {0} is now the current view.".format(key))
+                else:
+                    logging.warning("The object {0} was not of type PillpackPatient".format(patient_to_view))
             case consts.VIEW_PILLPACK_FOLDER_LOCATION:
                 if self.app_observer.connected_views.__contains__(consts.VIEW_PILLPACK_FOLDER_LOCATION):
                     frame: ViewPillpackProductionFolder = self.app_observer.connected_views[
                         consts.VIEW_PILLPACK_FOLDER_LOCATION]
+                    logging.info("Accessed pillpack location view from application observer")
                 else:
                     frame: ViewPillpackProductionFolder = ViewPillpackProductionFolder(parent=self.container,
                                                                                        master=self)
+                    logging.info("No pillpack location view connected to application observer. "
+                                 "A new pillpack location view has been created")
                     self.app_observer.connect(consts.VIEW_PILLPACK_FOLDER_LOCATION, frame)
                     frame.grid(row=0, column=0, padx=50, pady=(50, 50), sticky="nsew", columnspan=4, rowspan=4)
                 frame.tkraise()
+                logging.info("The pillpack location view is now the current view.")
 
     def on_watchdog_event(self, event):
         watchdog_event = self.queue.get()
@@ -192,35 +228,53 @@ class App(tkinter.Tk):
             full_path = str(watchdog_event.src_path)
         if isinstance(watchdog_event, FileMovedEvent):
             full_path = str(watchdog_event.dest_path)
+        logging.info("Full path of file monitored by watchdog observer: {0}".format(full_path))
         split_file_name = full_path.rsplit('\\')
         file_name = split_file_name[len(split_file_name) - 1]
         file_extension = full_path.rsplit('.')[1]
         if file_extension == "ppc_processed":
+            logging.info("The modified file has a ppc_processed file extension. Executing patient(s) update...")
             list_of_patients = (pillpackData.get_patient_data_from_specific_file
                                 (self.loaded_prns_and_ignored_medications, file_name))
             for patient in list_of_patients:
-                patient_exists: bool = self.collected_patients.update_pillpack_patient_dict(patient)
-                if not patient_exists:
-                    if self.collected_patients.pillpack_patient_dict.__contains__(patient.last_name.lower()):
-                        list_of_patients: list = (self.collected_patients
-                                                  .pillpack_patient_dict.get(patient.last_name.lower()))
-                        list_of_patients.append(patient)
-                        list_of_patients = list(dict.fromkeys(list_of_patients))
-                        self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
+                if isinstance(patient, PillpackPatient):
+                    patient_exists: bool = self.collected_patients.update_pillpack_patient_dict(patient)
+                    if not patient_exists:
+                        logging.info("Patient {0} {1} does not exist in current production. "
+                                     "Adding to production list...".format(patient.first_name, patient.last_name))
+                        if self.collected_patients.pillpack_patient_dict.__contains__(patient.last_name.lower()):
+                            logging.info("Patients with last name {0} already exist in dictionary. "
+                                         "Adding new patient to this list.".format(patient.last_name))
+                            list_of_patients: list = (self.collected_patients
+                                                      .pillpack_patient_dict.get(patient.last_name.lower()))
+                            list_of_patients.append(patient)
+                            list_of_patients = list(dict.fromkeys(list_of_patients))
+                            self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
+                            logging.info("Added new patient {0} {1} to the production list."
+                                         .format(patient.first_name, patient.last_name))
+                        else:
+                            logging.info("No patient with last name {0} exists in dictionary. "
+                                         "Creating new list of patients with this last name.".format(patient.last_name))
+                            list_of_patients: list = [patient]
+                            self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
+                            logging.info("Added new patient {0} {1} to the production list."
+                                         .format(patient.first_name, patient.last_name))
                     else:
-                        list_of_patients: list = [patient]
-                        self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
+                        logging.info("Patient {0} {1} exists in current production. Removing old script data..."
+                                     .format(patient.first_name, patient.last_name))
+                        self.collected_patients.remove_patient(patient)
+                        self.collected_patients.remove_matched_patient(patient)
+                        self.collected_patients.remove_minor_mismatched_patient(patient)
+                        self.collected_patients.remove_severely_mismatched_patient(patient)
                 else:
-                    self.collected_patients.remove_patient(patient)
-                    self.collected_patients.remove_matched_patient(patient)
-                    self.collected_patients.remove_minor_mismatched_patient(patient)
-                    self.collected_patients.remove_severely_mismatched_patient(patient)
+                    logging.warning("Object {0} is not of type PillpackPatient".format(patient))
             scriptScanner.save_collected_patients(self.collected_patients)
             self.app_observer.update_all()
 
     def notify(self, event):
         self.queue.put(event)
         self.event_generate("<<WatchdogEvent>>", when="tail")
+        logging.info("Watchdog event {0} has been added to the queue.".format(event))
 
 
 class WatchdogEventHandler(FileSystemEventHandler):
@@ -443,6 +497,7 @@ class HomeScreen(Frame):
 
     def threaded_get_production_data(self):
         self.loading_message_thread.join()
+        logging.info("Loading message thread finished.")
         self.master.collected_patients = scriptScanner.CollectedPatients()
         populate_pillpack_production_data(self.master)
         return
@@ -462,6 +517,7 @@ class HomeScreen(Frame):
 
     def delete_loading_message(self):
         self.get_production_thread.join()
+        logging.info("Production data re-population finished.")
         for trees_results_and_dicts in self.list_of_trees:
             tree: Treeview = trees_results_and_dicts[0]
             key = "loading"
@@ -470,6 +526,7 @@ class HomeScreen(Frame):
 
     def threaded_update(self):
         self.delete_loading_message_thread.join()
+        logging.info("Loading message removed from tree.")
         self.update()
         return
 
@@ -498,6 +555,7 @@ class HomeScreen(Frame):
                                   self.detatched_mismatched_patient_nodes,
                                   self.list_of_trees[3][4],
                                   self.list_of_trees[3][5]])
+        logging.info("Updated list of patient trees.")
 
     def set_tree_widgets(self):
         for i in range(len(self.list_of_trees)):
@@ -541,6 +599,9 @@ class HomeScreen(Frame):
             search_bar.grid(row=3, column=0)
             tree.grid(row=4, column=0, sticky="ew")
             scrollbar.grid(row=4, column=1, sticky="ns")
+            logging.info("Set all widgets for tree {0} using results from {1} and associated dictionary {2}. "
+                         "Nodes currently detatched from tree {0}: {3}"
+                         .format(tree, results_location, associated_dict, detached_nodes))
 
     def _refresh_patient_status(self):
         for patient_list in self.master.collected_patients.pillpack_patient_dict.values():
@@ -548,6 +609,8 @@ class HomeScreen(Frame):
                 for patient in patient_list:
                     if isinstance(patient, PillpackPatient):
                         patient.determine_ready_to_produce_code()
+                        logging.info("Patient {0} {1}'s status is {2}"
+                                     .format(patient.first_name, patient.last_name, patient.ready_to_produce_code))
 
     def _refresh_treeview(self, tree_to_refresh: tkinter.ttk.Treeview, dictionary: dict):
         iterator = dictionary.values()
@@ -564,6 +627,8 @@ class HomeScreen(Frame):
                             tree_to_refresh.insert('', 'end', key, text=key)
                             tree_to_refresh.set(key, 'First Name', patient.first_name)
                             tree_to_refresh.set(key, 'Last Name', patient.last_name)
+                            logging.info("New Patient {0} {1} added to tree {2}"
+                                         .format(patient.first_name, patient.last_name, tree_to_refresh))
                         if matching_pillpack_patient.date_of_birth == datetime.date.today():
                             tree_to_refresh.set(key, 'Date of Birth', "Not provided...")
                         else:
@@ -594,6 +659,8 @@ class HomeScreen(Frame):
                             else:
                                 tree_to_refresh.set(key, 'Condition', "No scripts yet scanned")
                                 tree_to_refresh.item(key, image=self.no_scripts_scanned_image)
+                    else:
+                        logging.error("Item in patient list: {0} is not of type PillpackPatient".format(patient))
         sort_treeview(tree_to_refresh, "Last Name", False)
 
     def _filter_treeview(self, tree_to_filter: Treeview, dictionary_to_reference: dict, search_code: int = None):
@@ -611,10 +678,17 @@ class HomeScreen(Frame):
                             if (tree_to_filter.exists(key)
                                     and matching_pillpack_patient.ready_to_produce_code != search_code):
                                 tree_to_filter.delete(key)
+                                logging.info("Removed patient {0} {1} from tree. The search code of the filter ({2}) "
+                                             "did not match the patient's production status code ({3})."
+                                             .format(patient.first_name, patient.last_name,
+                                                     search_code, patient.ready_to_produce_code))
+                        else:
+                            logging.error("Item in patient list: {0} is not of type PillpackPatient".format(patient))
         else:
             self._refresh_treeview(tree_to_filter, dictionary_to_reference)
 
     def update(self):
+        logging.info("HomeScreen update function called.")
         self._update_list_of_trees()
         self._refresh_patient_status()
         self.set_tree_widgets()
@@ -623,14 +697,17 @@ class HomeScreen(Frame):
             associated_dict: dict = self.list_of_trees[i][2]
             self._refresh_treeview(tree, associated_dict)
             self._on_filter_selected(self.list_of_trees[i][4], tree, associated_dict, i)
+        logging.info("HomeScreen update function call complete")
 
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
-            self.script_window = ScanScripts(self, self.master)  # create window if its None or destroyed
+            logging.info("No Scan Scripts view has been instantiated. Creating new Scan Scripts view...")
+            self.script_window = ScanScripts(self, self.master)
             self.script_window.grab_set()
             self.script_window.attributes('-topmost', 'true')
         else:
-            self.script_window.focus()  # if window exists focus it
+            logging.info("Scan Scripts view is now in focus.")
+            self.script_window.focus()
 
     def _on_filter_selected(self, selected_filter: str, treeview_to_filter: Treeview, dictionary_to_reference: dict,
                             tree_index: int):
@@ -639,31 +716,37 @@ class HomeScreen(Frame):
                 self.list_of_trees[tree_index][4] = consts.SHOW_ALL_RESULTS_STRING
                 self.list_of_trees[tree_index][5] = consts.SHOW_ALL_RESULTS_CODE
                 self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
+                logging.info("'All Results' patient filter has been applied.")
             case consts.NOTHING_TO_COMPARE_STRING:
                 self.list_of_trees[tree_index][4] = consts.NOTHING_TO_COMPARE_STRING
                 self.list_of_trees[tree_index][5] = consts.NOTHING_TO_COMPARE_CODE
                 self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
                 self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.NOTHING_TO_COMPARE_CODE)
+                logging.info("'Nothing Yet Scanned' patient filter has been applied.")
             case consts.MISSING_MEDICATIONS_STRING:
                 self.list_of_trees[tree_index][4] = consts.MISSING_MEDICATIONS_STRING
                 self.list_of_trees[tree_index][5] = consts.MISSING_MEDICATIONS_CODE
                 self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
                 self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.MISSING_MEDICATIONS_CODE)
+                logging.info("'Missing Medications' patient filter has been applied.")
             case consts.DO_NOT_PRODUCE_STRING:
                 self.list_of_trees[tree_index][4] = consts.DO_NOT_PRODUCE_STRING
                 self.list_of_trees[tree_index][5] = consts.DO_NOT_PRODUCE_CODE
                 self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
                 self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.DO_NOT_PRODUCE_CODE)
+                logging.info("'Do Not Produce' patient filter has been applied.")
             case consts.READY_TO_PRODUCE_STRING:
                 self.list_of_trees[tree_index][4] = consts.READY_TO_PRODUCE_STRING
                 self.list_of_trees[tree_index][5] = consts.READY_TO_PRODUCE_CODE
                 self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
                 self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.READY_TO_PRODUCE_CODE)
+                logging.info("'Ready to Produce' patient filter has been applied.")
             case consts.MANUALLY_CHECKED_STRING:
                 self.list_of_trees[tree_index][4] = consts.MANUALLY_CHECKED_STRING
                 self.list_of_trees[tree_index][5] = consts.MANUALLY_CHECKED_CODE
                 self._refresh_treeview(treeview_to_filter, dictionary_to_reference)
                 self._filter_treeview(treeview_to_filter, dictionary_to_reference, consts.MANUALLY_CHECKED_CODE)
+                logging.info("'Manually Checked' patient filter has been applied.")
 
     def on_treeview_double_click(self, tree_to_select_from: Treeview):
         if isinstance(tree_to_select_from, Treeview):
@@ -681,9 +764,16 @@ class HomeScreen(Frame):
                                           )
                                          )
                     selected_patient = filtered_patients[0]
-                    self.master.show_frame(consts.VIEW_PATIENT_SCREEN, selected_patient)
+                    if isinstance(selected_patient, PillpackPatient):
+                        self.master.show_frame(consts.VIEW_PATIENT_SCREEN, selected_patient)
+                        logging.info("Patient {0} {1} selected through user double click. Patient view for this "
+                                     "patient has been opened."
+                                     .format(selected_patient.first_name, selected_patient.last_name))
+                    else:
+                        logging.error("Object {0} in filtered patient list is not of type PillpackPatient."
+                                      .format(selected_patient))
             except IndexError as e:
-                print("IndexError: ", e)
+                logging.error("Thrown IndexError: {0}".format(e))
 
 
 class ViewPillpackProductionFolder(Frame):
@@ -712,10 +802,13 @@ class ViewPillpackProductionFolder(Frame):
         if pillpackData.config["pillpackDataLocation"] == consts.UNSET_LOCATION:
             warning_message: NoPillpackFolderLocationSetWarning = NoPillpackFolderLocationSetWarning(self)
             warning_message.grab_set()
+            logging.warning("No directory for pillpack data has been set by the user.")
 
     def update(self):
+        logging.info("ViewPillpackProductionFolder update function called.")
         self.folder_location = pillpackData.config["pillpackDataLocation"]
         self.folder_location_string_var.set(self.folder_location)
+        logging.info("ViewPillpackProductionFolder update function call complete.")
 
 
 class NoPillpackFolderLocationSetWarning(Toplevel):
@@ -819,6 +912,7 @@ class PatientMedicationDetails(Frame):
 
     def _on_manually_checked_button_click(self):
         self.patient_object.manually_checked(not self.patient_object.manually_checked_flag)
+        logging.info("Patient Manually checked flag set to: {0}". format(self.patient_object.manually_checked_flag))
         scriptScanner.save_collected_patients(self.master.collected_patients)
         self.master.app_observer.update_all()
 
@@ -893,6 +987,7 @@ class PatientMedicationDetails(Frame):
         for i in range(0, len(dictionary_values)):
             medication = dictionary_values[i]
             if isinstance(medication, Medication):
+                logging.info("Displaying medication {0}".format(medication.medication_name))
                 medication_name_label = Label(label_frame_to_populate, text=medication.medication_name,
                                               wraplength=200)
                 medication_dosage_label = Label(label_frame_to_populate, text=medication.dosage)
@@ -907,6 +1002,8 @@ class PatientMedicationDetails(Frame):
                                                e.medication_name))
                     unlink_button.grid(row=i + 1, column=3)
                     create_tool_tip(link_icon_label, text=linked_medication.medication_name)
+                    logging.info("Medication {0} is linked to medication {1}."
+                                 .format(medication.medication_name, linked_medication.medication_name))
                 if include_prn_medications_button:
                     make_prn_medication_button = Button(label_frame_to_populate, text="Set as PRN",
                                                         command=lambda e=medication:
@@ -915,22 +1012,26 @@ class PatientMedicationDetails(Frame):
                                                                                    )
                                                         )
                     make_prn_medication_button.grid(row=i + 1, column=3)
+                    logging.info("Medication is not currently listed as a PRN.")
                 if include_delete_prn_medications_button:
                     delete_prn_medication_button = Button(label_frame_to_populate, text="Remove from PRN list",
                                                           command=lambda e=medication: self.remove_prn_medication(e))
                     delete_prn_medication_button.grid(row=i + 1, column=5)
+                    logging.info("Medication is currently listed as a PRN.")
                 if create_medication_link_button:
                     ignore_medication_button = Button(label_frame_to_populate, text="Link Medication",
                                                       command=lambda e=medication:
                                                       self.open_link_medication_view(e)
                                                       )
                     ignore_medication_button.grid(row=i + 1, column=7)
+                    logging.info("Medication can be linked to another medication brand.")
                 if remove_from_ignored_medications_button:
                     remove_from_ignored_medications_button = Button(label_frame_to_populate, text="Dosage is incorrect",
                                                                     command=lambda e=medication:
                                                                     self.remove_medication_from_ignore_dict(e)
                                                                     )
                     remove_from_ignored_medications_button.grid(row=i + 1, column=9)
+                    logging.info("Medication dosage {0} has been disregarded.".format(medication.dosage))
 
     def populate_incorrect_dosages_label_frame(self,
                                                incorrect_medication_dosage_frame,
@@ -955,6 +1056,8 @@ class PatientMedicationDetails(Frame):
         for i in range(0, len(incorrect_dosages_values)):
             medication = incorrect_dosages_values[i]
             if isinstance(medication, Medication):
+                logging.warning("Medication {0} has a dosage on script inconsistent with the dosage in production."
+                                .format(medication.medication_name))
                 substring_results = [key for key in self.patient_object.medication_dict.keys() if
                                      key in medication.medication_name]
                 if len(substring_results) > 0:
@@ -977,25 +1080,32 @@ class PatientMedicationDetails(Frame):
                         medication_dosage_in_production_label.grid(row=i + 1, column=1)
                         medication_dosage_on_script_label.grid(row=i + 1, column=2)
                         add_to_ignore_list_button.grid(row=i + 1, column=3)
+                        logging.warning("Dosage in production: {0} Dosage on script: {1}"
+                                        .format(medication.dosage, medication_in_production.dosage))
 
     @staticmethod
     def clear_label_frame(frame_to_clear: LabelFrame):
         for widget in frame_to_clear.winfo_children():
             widget.destroy()
+            logging.info("Destroyed widget {0} in frame {1}".format(widget, frame_to_clear))
 
     def open_link_medication_view(self, selected_medication: Medication):
         if self.link_medication_window is None or not self.link_medication_window.winfo_exists():
+            logging.info("No Link Medication view has been instantiated. Creating new Scan Scripts view...")
             self.link_medication_window = LinkMedication(self, self.patient_object, selected_medication, self.master)
             self.link_medication_window.grab_set()
         else:
             self.link_medication_window.focus()
+            logging.info("Link Medication view is now in focus.")
 
     def open_unlink_medication_view(self, medication_key: str):
         if self.unlink_medication_window is None or not self.link_medication_window.winfo_exists():
+            logging.info("No Unlink Medication view has been instantiated. Creating new Unlink Medication view...")
             self.unlink_medication_window = UnlinkMedication(self, self.patient_object, medication_key, self.master)
             self.unlink_medication_window.grab_set()
         else:
             self.unlink_medication_window.focus()
+            logging.info("Unlink Medication is now in focus.")
 
     def set_medication_as_prn(self, selected_medication: Medication, medication_dict: dict):
         if medication_dict.__contains__(selected_medication.medication_name):
@@ -1040,6 +1150,7 @@ class PatientMedicationDetails(Frame):
             self.master.app_observer.update_all()
 
     def update(self):
+        logging.info("PatientMedicationDetails update function called.")
         self._refresh_patient_status()
         self.check_if_patient_is_ready_for_production()
         self.clear_label_frame(self.production_medication_frame)
@@ -1089,6 +1200,7 @@ class PatientMedicationDetails(Frame):
                                                     13)
         self.display_canvas.update_idletasks()
         self.display_canvas.config(scrollregion=self.display_frame.bbox())
+        logging.info("PatientMedicationDetails update function call complete.")
 
 
 class LinkMedication(Toplevel):
@@ -1124,6 +1236,8 @@ class LinkMedication(Toplevel):
             medication_object: Medication = self.selected_patient.missing_medications_dict[medication]
             if medication_object.dosage == self.linking_medication.dosage:
                 self.selectable_medications.append(medication_object)
+                logging.info("Medication {0} can be linked with {1}. Dosages match."
+                             .format(medication_object.medication_name, self.linking_medication.medication_name))
 
     def create_selectable_medications_tree(self):
         for medication in self.selectable_medications:
@@ -1301,7 +1415,9 @@ class ScanScripts(Toplevel):
         self.patient_tree.pack(padx=20)
 
     def scan_scripts(self, application: App, script_input: str):
+        logging.info("Scanning script...")
         if scriptScanner.scan_script_and_check_medications(application.collected_patients, script_input):
+            logging.info("Patient information retrieved from scanned script successfully.")
             self.patient_tree.set('perfect_matches', 'No. of Patients',
                                   str(len(self.main_application.collected_patients.matched_patients)) + "/"
                                   + str(len(self.reduced_patients)))
@@ -1314,6 +1430,7 @@ class ScanScripts(Toplevel):
                                   len(application.collected_patients.severe_mismatch_patients))
             self.__iterate_patients(application.collected_patients.severe_mismatch_patients, 'severe_mismatches')
         else:
+            logging.warning("Could not retrieve patient information from scanned script.")
             warning = Toplevel(master=self.master)
             warning.attributes('-topmost', 'true')
             warning.geometry("400x200")
@@ -1336,40 +1453,61 @@ class ScanScripts(Toplevel):
                             (patient, self.main_application.collected_patients.pillpack_patient_dict)
                         )
                         if self.patient_tree.exists(patient.first_name + " " + patient.last_name):
+                            logging.info("Patient {0} {1} exists within {2}."
+                                         .format(patient.first_name, patient.last_name, iterator))
                             if len(patient.matched_medications_dict) == len(matching_pillpack_patient.medication_dict):
                                 self.patient_tree.item(patient.first_name + " " + patient.last_name,
                                                        text=patient.first_name + " " + patient.last_name,
                                                        image=self.ready_to_produce)
+                                logging.info("Patient {0} {1} is ready to produce."
+                                             .format(patient.first_name, patient.last_name))
                             else:
                                 self.patient_tree.item(patient.first_name + " " + patient.last_name,
                                                        text=patient.first_name + " " + patient.last_name,
                                                        image=self.warning_image)
+                                logging.info("Patient {0} {1} is awaiting medications."
+                                             .format(patient.first_name, patient.last_name))
                         else:
                             if len(patient.matched_medications_dict) == len(matching_pillpack_patient.medication_dict):
+                                logging.info("Patient {0} {1} does not exist within {2}. Creating new tree entry."
+                                             .format(patient.first_name, patient.last_name, iterator))
                                 self.patient_tree.insert(tree_parent_id, 'end',
                                                          patient.first_name + " " + patient.last_name,
                                                          text=patient.first_name + " " + patient.last_name,
                                                          image=self.ready_to_produce)
+                                logging.info("Patient {0} {1} is ready to produce."
+                                             .format(patient.first_name, patient.last_name))
                             else:
                                 self.patient_tree.insert(tree_parent_id, 'end',
                                                          patient.first_name + " " + patient.last_name,
                                                          text=patient.first_name + " " + patient.last_name,
                                                          image=self.warning_image)
+                                logging.info("Patient {0} {1} is awaiting medications."
+                                             .format(patient.first_name, patient.last_name))
 
     def on_treeview_double_click(self, event):
         tree = self.patient_tree
         if isinstance(tree, Treeview):
-            item = tree.selection()[0]
-            first_name = item.split(" ")[0]
-            last_name = item.split(" ")[1]
-            if self.main_application.collected_patients.pillpack_patient_dict.__contains__(last_name.lower()):
-                list_of_patients: list = self.main_application.collected_patients.pillpack_patient_dict.get(
-                    last_name.lower())
-                for patient in list_of_patients:
-                    if isinstance(patient, PillpackPatient):
-                        if patient.first_name.lower() == first_name.lower():
-                            self.main_application.show_frame(consts.VIEW_PATIENT_SCREEN, patient)
-                            self.parent.focus()
+            try:
+                item = tree.selection()[0]
+                first_name = item.split(" ")[0]
+                last_name = item.split(" ")[1]
+                if self.main_application.collected_patients.pillpack_patient_dict.__contains__(last_name.lower()):
+                    list_of_patients: list = self.main_application.collected_patients.pillpack_patient_dict.get(
+                        last_name.lower())
+                    for patient in list_of_patients:
+                        if isinstance(patient, PillpackPatient):
+                            if patient.first_name.lower() == first_name.lower():
+                                self.main_application.show_frame(consts.VIEW_PATIENT_SCREEN, patient)
+                                self.parent.focus()
+                            logging.info("Patient {0} {1} selected through user double click. Patient view for this "
+                                         "patient has been opened."
+                                         .format(patient.first_name, patient.last_name))
+                        else:
+                            logging.error("Object {0} in filtered patient list is not of type PillpackPatient."
+                                          .format(patient))
+            except IndexError as e:
+                logging.error("Thrown IndexError: {0}".format(e))
 
 
 def display_warning_if_pillpack_data_is_empty(application: App, function, warning_text: str):
@@ -1508,6 +1646,5 @@ if __name__ == '__main__':
         app.mainloop()
         app.filesystem_observer.stop()
         app.filesystem_observer.join()
-    except:
-        logger.error('Exception on main')
+    except E:
         raise
