@@ -63,8 +63,8 @@ def scan_script(raw_xml_text: str):
         return
 
 
-def load_pillpack_data(prns_and_ignored_medications: dict):
-    patient_data_from_pillpack: dict = get_patient_medicine_data(prns_and_ignored_medications)
+def load_pillpack_data(prns_and_linked_medications: dict, separating_tag: str):
+    patient_data_from_pillpack: dict = get_patient_medicine_data(prns_and_linked_medications, separating_tag)
     return patient_data_from_pillpack
 
 
@@ -90,7 +90,7 @@ def extract_patient_data(script_xml):
                      .format(patient_first_name, patient_last_name, patient_dob))
         for medicine in medicines_on_script:
             medication_object: Medication = extract_medicine_data(medicine)
-            patient_object.add_medication_to_dict(medication_object)
+            patient_object.add_medication_to_production_dict(medication_object)
         return patient_object
     else:
         return None
@@ -99,8 +99,8 @@ def extract_patient_data(script_xml):
 def check_script_medications_against_pillpack(patient_from_production: PillpackPatient,
                                               patient_from_script: PillpackPatient,
                                               collected_patients: CollectedPatients):
-    full_medication_dict: dict = patient_from_production.medication_dict
-    script_medication_dict: dict = patient_from_script.medication_dict
+    full_medication_dict: dict = patient_from_production.production_medications_dict
+    script_medication_dict: dict = patient_from_script.production_medications_dict
     for medication in full_medication_dict.keys():
         substring_results = [key for key in script_medication_dict.keys() if medication in key]
         if (len(substring_results) > 0
@@ -109,26 +109,26 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
             script_medication: Medication = script_medication_dict[substring_results[0]]
             logging.info("Comparing pillpack medication ({0}) with matched medication on scanned script ({1})"
                          .format(pillpack_medication.medication_name, script_medication.medication_name))
-            if pillpack_medication.equals(script_medication):
-                patient_from_production.add_matched_medication_to_dict(pillpack_medication)
+            if pillpack_medication.dosage_equals(script_medication):
+                patient_from_production.add_medication_to_matched_dict(pillpack_medication)
                 clear_medication_warning_dicts(patient_from_production, pillpack_medication)
                 logging.info("Medications and dosages match. Adding medication {0} to matched medications dictionary"
                              .format(script_medication.medication_name))
             else:
                 script_medication.medication_name = pillpack_medication.medication_name
-                patient_from_production.add_incorrect_dosage_medication_to_dict(script_medication)
+                patient_from_production.add_medication_to_incorrect_dosage_dict(script_medication)
                 logging.info("Medications match, but dosages are inconsistent. Adding medication {0} to "
                              "incorrect dosages dictionary.".format(script_medication.medication_name))
-        elif not patient_from_script.medication_dict.__contains__(medication):
+        elif not patient_from_script.production_medications_dict.__contains__(medication):
             if not patient_from_production.matched_medications_dict.__contains__(medication):
                 if (not patient_from_production.prn_medications_dict.__contains__(medication)
                         and not patient_from_production.medications_to_ignore.__contains__(medication)
                         and not patient_from_production.linked_medications.__contains__(medication)):
-                    patient_from_production.add_missing_medication_to_dict(full_medication_dict[medication])
+                    patient_from_production.add_medication_to_missing_dict(full_medication_dict[medication])
                     logging.info("Medication {0} is not present on the scanned script. "
                                  "No exceptions for this medication exist. "
                                  "Adding to the missing medication dictionary."
-                                 .format(medication.medication_name))
+                                 .format(medication))
     for medication in script_medication_dict.keys():
         substring_results = [key for key in full_medication_dict.keys() if key in medication]
         if len(substring_results) > 0:
@@ -143,12 +143,12 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
                                                                              patient_from_production.linked_medications)
                 if linked_medication is not None:
                     clear_medication_warning_dicts(patient_from_production, linked_medication)
-                    patient_from_production.add_matched_medication_to_dict(script_medication_dict[medication])
+                    patient_from_production.add_medication_to_matched_dict(script_medication_dict[medication])
                     logging.info("Medication {0} is linked to {1}. Adding medication to matched dictionary."
                                  .format(script_medication_dict[medication], linked_medication))
                 elif (not patient_from_production.prn_medications_dict.__contains__(medication)
                       and not patient_from_production.medications_to_ignore.__contains__(medication)):
-                    patient_from_production.add_unknown_medication_to_dict(script_medication_dict[medication])
+                    patient_from_production.add_medication_to_unknown_dict(script_medication_dict[medication])
                     logging.info("Medication {0} from script is not present in {1} {2}'s list of pillpack medications. "
                                  "Adding medication to unknown medications dictionary."
                                  .format(medication,
@@ -157,9 +157,9 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
 
 
 def clear_medication_warning_dicts(patient: PillpackPatient, medication: Medication):
-    patient.remove_missing_medication_from_dict(medication)
-    patient.remove_incorrect_dosage_medication_from_dict(medication)
-    patient.remove_unknown_medication_from_dict(medication)
+    patient.remove_medication_from_missing_dict(medication)
+    patient.remove_medication_from_incorrect_dosage_dict(medication)
+    patient.remove_medication_from_unknown_dict(medication)
     logging.info("Removed medication {0} from missing medications, incorrect dosages and unknown medications "
                  "dictionaries.".format(medication.medication_name))
 
@@ -290,9 +290,9 @@ def check_if_patient_is_in_pillpack_production(pillpack_patient_dict: dict,
         elif isinstance(matched_patient, list) and len(matched_patient) == 0:
             collected_patients.add_patient(script_patient, consts.NO_MATCH)
             script_patient.ready_to_produce_code = 3
-            for medication in list(script_patient.medication_dict.values()):
-                script_patient.add_unknown_medication_to_dict(medication)
-            script_patient.medication_dict.clear()
+            for medication in list(script_patient.production_medications_dict.values()):
+                script_patient.add_medication_to_unknown_dict(medication)
+            script_patient.production_medications_dict.clear()
             collected_patients.add_severely_mismatched_patient(script_patient)
 
 
@@ -308,17 +308,17 @@ def scan_script_and_check_medications(collected_patients: CollectedPatients, sca
         return False
 
 
-def update_current_prns_and_ignored_medications(patient: Models.PillpackPatient,
-                                                collected_patients: CollectedPatients,
-                                                prns_and_ignored_medications: dict):
+def update_current_prns_and_linked_medications(patient: Models.PillpackPatient,
+                                               collected_patients: CollectedPatients,
+                                               prns_and_linked_medications: dict):
     if collected_patients.pillpack_patient_dict.__contains__(patient.last_name.lower()):
         key: str = patient.first_name.lower() + " " + patient.last_name.lower() + " " + str(patient.date_of_birth)
         prns_ignored_medications_sub_dict: dict = {
             Models.consts.PRN_KEY: patient.prn_medications_dict,
             Models.consts.LINKED_MEDS_KEY: patient.linked_medications
         }
-        prns_and_ignored_medications[key] = prns_ignored_medications_sub_dict
-        save_prns_and_ignored_medications(prns_and_ignored_medications)
+        prns_and_linked_medications[key] = prns_ignored_medications_sub_dict
+        save_prns_and_linked_medications(prns_and_linked_medications)
         logging.info("Updated patient {0} {1}'s PRNs and linked medications."
                      .format(patient.first_name, patient.last_name))
 
@@ -327,8 +327,8 @@ def save_collected_patients(collected_patients: CollectedPatients):
     save_to_file(collected_patients, Models.consts.COLLECTED_PATIENTS_FILE)
 
 
-def save_prns_and_ignored_medications(patient_prns_and_ignored_medications_dict: dict):
-    save_to_file(patient_prns_and_ignored_medications_dict, Models.consts.PRNS_AND_IGNORED_MEDICATIONS_FILE)
+def save_prns_and_linked_medications(patient_prns_and_linked_medications_dict: dict):
+    save_to_file(patient_prns_and_linked_medications_dict, Models.consts.PRNS_AND_LINKED_MEDICATIONS_FILE)
 
 
 def save_to_file(object_to_save, filename):
@@ -357,21 +357,24 @@ def load_collected_patients_from_object():
     return collected_patients
 
 
-def load_prns_and_ignored_medications_from_object():
-    prns_and_ignored_medications: dict = load_object(Models.consts.PRNS_AND_IGNORED_MEDICATIONS_FILE)
-    if prns_and_ignored_medications is None:
-        prns_and_ignored_medications = {}
-    return prns_and_ignored_medications
+def load_prns_and_linked_medications_from_object():
+    prns_and_linked_medications: dict = load_object(Models.consts.PRNS_AND_LINKED_MEDICATIONS_FILE)
+    if prns_and_linked_medications is None:
+        prns_and_linked_medications = {}
+    return prns_and_linked_medications
 
-def __load_settings():
+
+def load_settings():
     if getattr(sys, 'frozen', False):
         application_path = os.path.dirname(sys.executable)
     else:
         application_path = os.path.dirname(os.path.abspath(__file__))
-    return yaml.safe_load(open(application_path + "\\settings.yaml"))
+    with open(application_path + "\\settings.yaml", 'r') as file:
+        settings = file.read()
+    return yaml.safe_load(settings)
 
 
-def __modify_pillpack_location(new_location: str):
+def modify_pillpack_location(new_location: str):
     location_json = {"pillpackDataLocation": new_location}
     if getattr(sys, 'frozen', False):
         application_path = os.path.dirname(sys.executable)
@@ -381,12 +384,12 @@ def __modify_pillpack_location(new_location: str):
         yaml.dump(location_json, file, sort_keys=False)
 
 
-def __scan_pillpack_folder(filepath: str):
+def _scan_pillpack_folder(filepath: str):
     entities = scandir(filepath)
     return list(filter(lambda entity: entity.is_file() and entity.name.split(".")[1] == "ppc_processed", entities))
 
 
-def __sanitise_and_encode_text_from_file(filename: str):
+def _sanitise_and_encode_text_from_file(filename: str, separating_tag: str):
     if config is not None:
         raw_file = None
         list_of_strings = None
@@ -399,7 +402,9 @@ def __sanitise_and_encode_text_from_file(filename: str):
             trimmed_text = "<" + raw_text.split("<", 1)[1].rsplit(">\\n", 1)[0] + ">"
 
             # Makes the content within the OrderInfo tags a bit more readable.
-            sanitised_text = re.sub("</OrderInfo>.*?<OrderInfo>", "</OrderInfo>\n<OrderInfo>", trimmed_text,
+            sanitised_text = re.sub("</" + separating_tag + ">.*?<" + separating_tag + ">",
+                                    "</" + separating_tag + ">\n<" + separating_tag + ">",
+                                    trimmed_text,
                                     flags=re.DOTALL)
 
             # For some reason, pillpack adds a bunch of garbage text before the start of the XML tag.
@@ -408,7 +413,7 @@ def __sanitise_and_encode_text_from_file(filename: str):
             encoded_text = sanitised_text.encode('utf8').decode('unicode-escape')
 
             # Splits each OrderInfo tag and sets each of them as an element in a list.
-            list_of_strings = encoded_text.split("</OrderInfo>")
+            list_of_strings = encoded_text.split("</" + separating_tag + ">")
             for i in range(0, len(list_of_strings)):
                 string = list_of_strings[i]
                 if len(string) > 0:
@@ -419,9 +424,12 @@ def __sanitise_and_encode_text_from_file(filename: str):
                         string = '<?xml version="1.0" encoding="utf-8"?>' + string
 
                     # Ditto for the OrderInfo closing tags
-                    if '</OrderInfo>' not in string:
-                        string = string + '</OrderInfo>'
-                    list_of_strings[i] = string
+                    if '</' + separating_tag + '>' not in string:
+                        string = string + '</' + separating_tag + '>'
+                    if '<' + separating_tag + '>' in string:
+                        list_of_strings[i] = string
+                    else:
+                        list_of_strings.pop(i)
                 else:
                     list_of_strings.pop(i)
         except FileNotFoundError as e:
@@ -434,17 +442,15 @@ def __sanitise_and_encode_text_from_file(filename: str):
         return list_of_strings
 
 
-def __remove_whitespace(node):
+def _remove_whitespace(node):
     if node.nodeType == minidom.Node.TEXT_NODE:
         if node.nodeValue.strip() == "":
             node.nodeValue = ""
-            logging.info("Removed whitespace from {0}".format(node))
     for child in node.childNodes:
-        logging.info("Recursively removing whitespace from {0}".format(child))
-        __remove_whitespace(child)
+        _remove_whitespace(child)
 
 
-def __generate_medication_dict(medication_element):
+def _generate_medication_dict(medication_element):
     if isinstance(medication_element, minidom.Element):
         # Only requires the first instance of a medicine name tag
         medications = medication_element.getElementsByTagName("MedNm")[0]
@@ -458,7 +464,7 @@ def __generate_medication_dict(medication_element):
         # Only require the first instance of a medication start date
         start_date = list_of_dosages[0].getElementsByTagName("TakeDt")[0]
         start_date_value = start_date.firstChild.nodeValue if start_date.hasChildNodes() else ""
-        start_date_final = __create_datetime(start_date_value)
+        start_date_final = _create_datetime(start_date_value)
 
         # DoseList represents each moment in the day a medicine has to be taken; this is represented in the following
         # format: Time_of_day:Dose - if there are multiple times in the day a medicine needs to be taken, then these
@@ -481,7 +487,7 @@ def __generate_medication_dict(medication_element):
         return
 
 
-def __create_datetime(date_string: str):
+def _create_datetime(date_string: str):
     date = datetime.date.today()
     try:
         date = datetime.date.fromisoformat(date_string)
@@ -491,7 +497,7 @@ def __create_datetime(date_string: str):
         return date
 
 
-def __create_patient_object(order_element):
+def _create_patient_object(order_element):
     if isinstance(order_element, minidom.Element):
         patient_name_element = order_element.getElementsByTagName("PtntNm")[0]
         patient_dob_element = order_element.getElementsByTagName("Birthday")[0]
@@ -505,16 +511,17 @@ def __create_patient_object(order_element):
         # manually
         patient_dob_string = patient_dob_string[:4] + "-" + patient_dob_string[4:] if patient_dob_string != "" else ""
         patient_dob_string = patient_dob_string[:7] + "-" + patient_dob_string[7:] if patient_dob_string != "" else ""
-        patient_dob = __create_datetime(patient_dob_string)
+        patient_dob = _create_datetime(patient_dob_string)
+
         patient_object = PillpackPatient(patient_first_name, patient_last_name, patient_dob)
         medication_items: list = order_element.getElementsByTagName("MedItem")
         start_date_list: list = []
         for medication in medication_items:
-            medication_object = __generate_medication_dict(medication)
+            medication_object = _generate_medication_dict(medication)
             start_date_list.append(medication_object.start_date)
             if isinstance(medication_object, Medication):
-                __update_medication_dosage(patient_object, medication_object)
-                patient_object.add_medication_to_dict(medication_object)
+                _update_medication_dosage(patient_object, medication_object)
+                patient_object.add_medication_to_production_dict(medication_object)
 
         # Sets the start date for the patient's medication cycle as the earliest date relative to now.
         patient_object.set_start_date(min(start_date_list))
@@ -522,44 +529,45 @@ def __create_patient_object(order_element):
     else:
         logging.error("The order parameter: {0} is not a valid XML element. Actual type is {1}"
                       .format(order_element, type(order_element)))
-        return
+        return None
 
 
-def __parse_xml(list_of_orders_raw_text: list):
+def _parse_xml(list_of_orders_raw_text: list):
     order_information: list = []
-    for order_raw_text in list_of_orders_raw_text:
-        try:
-            document = minidom.parseString(order_raw_text)
-            __remove_whitespace(document)
-            document.normalize()
-            order_information.append(document.getElementsByTagName("OrderInfo"))
-            logging.info("Parsed order from XML file")
-        except xml.parsers.expat.ExpatError as e:
-            logging.error("Could not parse order from XML file: {0}".format(e))
-        except TypeError as e:
-            logging.error("Could not parse order from XML file: {0}".format(e))
+    if list_of_orders_raw_text is not None:
+        for order_raw_text in list_of_orders_raw_text:
+            try:
+                document = minidom.parseString(order_raw_text)
+                _remove_whitespace(document)
+                document.normalize()
+                order_information.append(document.getElementsByTagName("OrderInfo"))
+                logging.info("Parsed order from XML file")
+            except xml.parsers.expat.ExpatError as e:
+                logging.error("Could not parse order from XML file: {0}".format(e))
+            except TypeError as e:
+                logging.error("Could not parse order from XML file: {0}".format(e))
     return order_information
 
 
-def __update_medication_dosage(patient_object: PillpackPatient, medication_object: Medication):
-    if patient_object.medication_dict.__contains__(medication_object.medication_name):
-        medication_to_update: Medication = patient_object.medication_dict[medication_object.medication_name]
+def _update_medication_dosage(patient_object: PillpackPatient, medication_object: Medication):
+    if patient_object.production_medications_dict.__contains__(medication_object.medication_name):
+        medication_to_update: Medication = patient_object.production_medications_dict[medication_object.medication_name]
         medication_to_update.dosage = medication_to_update.dosage + medication_object.dosage
-        patient_object.medication_dict[medication_object.medication_name] = medication_to_update
+        patient_object.production_medications_dict[medication_object.medication_name] = medication_to_update
         logging.info("Updated medication {0} dosage to {1}"
                      .format(medication_to_update.medication_name, medication_to_update.dosage))
 
 
-def get_patient_medicine_data(prns_and_ignored_medications: dict):
+def get_patient_medicine_data(prns_and_linked_medications: dict, separating_tag: str):
     if config is not None:
-        ppc_processed_files = __scan_pillpack_folder(config["pillpackDataLocation"])
+        ppc_processed_files = _scan_pillpack_folder(config["pillpackDataLocation"])
         dict_of_patients: dict = {}
         for ppc_file in ppc_processed_files:
-            list_of_orders_raw_text = __sanitise_and_encode_text_from_file(ppc_file.name)
-            list_of_orders: list = reduce(list.__add__, __parse_xml(list_of_orders_raw_text))
+            list_of_orders_raw_text = _sanitise_and_encode_text_from_file(ppc_file.name, separating_tag)
+            list_of_orders: list = reduce(list.__add__, _parse_xml(list_of_orders_raw_text))
             for order in list_of_orders:
-                patient_object = __create_patient_object(order)
-                patient_object = retrieve_prns_and_ignored_medications(patient_object, prns_and_ignored_medications)
+                patient_object = _create_patient_object(order)
+                patient_object = retrieve_prns_and_linked_medications(patient_object, prns_and_linked_medications)
                 if isinstance(patient_object, PillpackPatient):
                     if dict_of_patients.__contains__(patient_object.last_name.lower()):
                         list_of_patients: list = dict_of_patients.get(patient_object.last_name.lower())
@@ -572,29 +580,30 @@ def get_patient_medicine_data(prns_and_ignored_medications: dict):
         return dict_of_patients
 
 
-def get_patient_data_from_specific_file(prns_and_ignored_medications: dict, specified_file_name: str):
-    list_of_orders_raw_text = __sanitise_and_encode_text_from_file(specified_file_name)
-    list_of_orders: list = reduce(list.__add__, __parse_xml(list_of_orders_raw_text))
+def get_patient_data_from_specific_file(prns_and_linked_medications: dict, specified_file_name: str,
+                                        separating_tag: str):
+    list_of_orders_raw_text = _sanitise_and_encode_text_from_file(specified_file_name, separating_tag)
+    list_of_orders: list = reduce(list.__add__, _parse_xml(list_of_orders_raw_text))
     list_of_patients: list = []
     for order in list_of_orders:
-        patient_object = __create_patient_object(order)
-        patient_object = retrieve_prns_and_ignored_medications(patient_object, prns_and_ignored_medications)
+        patient_object = _create_patient_object(order)
+        patient_object = retrieve_prns_and_linked_medications(patient_object, prns_and_linked_medications)
         if isinstance(patient_object, PillpackPatient):
             list_of_patients.append(patient_object)
     return list_of_patients
 
 
-def retrieve_prns_and_ignored_medications(patient: PillpackPatient, prns_and_ignored_medications: dict):
+def retrieve_prns_and_linked_medications(patient: PillpackPatient, prns_and_linked_medications: dict):
     key = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
-    if prns_and_ignored_medications.__contains__(key.lower()):
-        patient.prn_medications_dict = prns_and_ignored_medications[key.lower()][consts.PRN_KEY]
-        patient.linked_medications = prns_and_ignored_medications[key.lower()][consts.LINKED_MEDS_KEY]
+    if prns_and_linked_medications.__contains__(key.lower()):
+        patient.prn_medications_dict = prns_and_linked_medications[key.lower()][Models.consts.PRN_KEY]
+        patient.linked_medications = prns_and_linked_medications[key.lower()][Models.consts.LINKED_MEDS_KEY]
     return patient
 
 
 def archive_pillpack_production(archive_file):
     if config is not None:
-        ppc_processed_files = __scan_pillpack_folder(config["pillpackDataLocation"])
+        ppc_processed_files = _scan_pillpack_folder(config["pillpackDataLocation"])
         pillpack_directory = config["pillpackDataLocation"] + "\\"
         with ZipFile(archive_file.name, 'w') as archived_production_data:
             for file in ppc_processed_files:
@@ -606,5 +615,5 @@ def archive_pillpack_production(archive_file):
             logging.info("Removed the pickle file of this production")
 
 
-config = __load_settings()
+config = load_settings()
 patient_order_list: list

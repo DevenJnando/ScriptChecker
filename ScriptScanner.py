@@ -60,6 +60,8 @@ consts.DO_NOT_PRODUCE_CODE = 4
 consts.MANUALLY_CHECKED_STRING = "Manually Checked"
 consts.MANUALLY_CHECKED_CODE = 5
 
+consts.PPC_SEPARATING_TAG = "OrderInfo"
+
 warning_constants = types.SimpleNamespace()
 warning_constants.PILLPACK_DATA_OVERWRITE_WARNING = "WARNING: You already have a pillpack production dataset open! " \
                                                     "If you reload the downloaded pillpack data, " \
@@ -145,7 +147,7 @@ class App(tkinter.Tk):
         self.minsize(1080, 720)
         self.maxsize(1080, 720)
         self.collected_patients = Functions.load_collected_patients_from_object()
-        self.loaded_prns_and_ignored_medications: dict = Functions.load_prns_and_ignored_medications_from_object()
+        self.loaded_prns_and_linked_medications: dict = Functions.load_prns_and_linked_medications_from_object()
         self.app_observer: Observer = Observer()
         self.total_medications = 0
         self.title_font = font.Font(family='Verdana', size=28, weight="bold")
@@ -236,7 +238,7 @@ class App(tkinter.Tk):
         if file_extension == "ppc_processed":
             logging.info("The modified file has a ppc_processed file extension. Executing patient(s) update...")
             list_of_patients = (Functions.get_patient_data_from_specific_file
-                                (self.loaded_prns_and_ignored_medications, file_name))
+                                (self.loaded_prns_and_linked_medications, file_name, "OrderInfo"))
             for patient in list_of_patients:
                 if isinstance(patient, PillpackPatient):
                     patient_exists: bool = self.collected_patients.update_pillpack_patient_dict(patient)
@@ -244,7 +246,7 @@ class App(tkinter.Tk):
                         logging.info("Patient {0} {1} does not exist in current production. "
                                      "Adding to production list...".format(patient.first_name, patient.last_name))
                         if self.collected_patients.pillpack_patient_dict.__contains__(patient.last_name.lower()):
-                            logging.info("Patients with last name {0} already exist in dictionary. "
+                            logging.info("Patients with last name {0} already exists in dictionary. "
                                          "Adding new patient to this list.".format(patient.last_name))
                             list_of_patients: list = (self.collected_patients
                                                       .pillpack_patient_dict.get(patient.last_name.lower()))
@@ -639,7 +641,7 @@ class HomeScreen(Frame):
                                                 str(matching_pillpack_patient.start_date) + " URGENT")
                         else:
                             tree_to_refresh.set(key, 'Start Date', matching_pillpack_patient.start_date)
-                        tree_to_refresh.set(key, 'No. of Medications', len(matching_pillpack_patient.medication_dict))
+                        tree_to_refresh.set(key, 'No. of Medications', len(matching_pillpack_patient.production_medications_dict))
                         if matching_pillpack_patient.manually_checked_flag:
                             tree_to_refresh.set(key, 'Condition', "Manually Checked")
                             tree_to_refresh.item(key, image=self.ready_to_produce_image)
@@ -654,7 +656,7 @@ class HomeScreen(Frame):
                                 tree_to_refresh.set(key, 'Condition', "Missing medications")
                                 tree_to_refresh.item(key, image=self.warning_image)
                             elif (len(matching_pillpack_patient.matched_medications_dict)
-                                  == len(matching_pillpack_patient.medication_dict)):
+                                  == len(matching_pillpack_patient.production_medications_dict)):
                                 tree_to_refresh.set(key, 'Condition', "Ready to produce")
                                 tree_to_refresh.item(key, image=self.ready_to_produce_image)
                             else:
@@ -1059,12 +1061,12 @@ class PatientMedicationDetails(Frame):
             if isinstance(medication, Medication):
                 logging.warning("Medication {0} has a dosage on script inconsistent with the dosage in production."
                                 .format(medication.medication_name))
-                substring_results = [key for key in self.patient_object.medication_dict.keys() if
+                substring_results = [key for key in self.patient_object.production_medications_dict.keys() if
                                      key in medication.medication_name]
                 if len(substring_results) > 0:
                     matching_key = substring_results[0]
-                    if self.patient_object.medication_dict.__contains__(matching_key):
-                        medication_in_production: Medication = self.patient_object.medication_dict.get(
+                    if self.patient_object.production_medications_dict.__contains__(matching_key):
+                        medication_in_production: Medication = self.patient_object.production_medications_dict.get(
                             matching_key
                         )
                         medication_name_label = Label(incorrect_medication_dosage_frame,
@@ -1111,43 +1113,43 @@ class PatientMedicationDetails(Frame):
     def set_medication_as_prn(self, selected_medication: Medication, medication_dict: dict):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
-        self.patient_object.add_prn_medication_to_dict(selected_medication)
+        self.patient_object.add_medication_to_prn_dict(selected_medication)
         Functions.save_collected_patients(self.master.collected_patients)
-        Functions.update_current_prns_and_ignored_medications(self.patient_object,
-                                                              self.master.collected_patients,
-                                                              self.master.loaded_prns_and_ignored_medications)
+        Functions.update_current_prns_and_linked_medications(self.patient_object,
+                                                             self.master.collected_patients,
+                                                             self.master.loaded_prns_and_linked_medications)
         self.master.app_observer.update_all()
 
     def remove_prn_medication(self, selected_medication: Medication):
         if self.patient_object.prn_medications_dict.__contains__(selected_medication.medication_name):
-            self.patient_object.remove_prn_medication_from_dict(selected_medication)
-            if self.patient_object.medication_dict.__contains__(selected_medication.medication_name):
-                self.patient_object.add_missing_medication_to_dict(selected_medication)
+            self.patient_object.remove_medication_from_prn_dict(selected_medication)
+            if self.patient_object.production_medications_dict.__contains__(selected_medication.medication_name):
+                self.patient_object.add_medication_to_missing_dict(selected_medication)
             else:
-                self.patient_object.add_unknown_medication_to_dict(selected_medication)
+                self.patient_object.add_medication_to_unknown_dict(selected_medication)
             Functions.save_collected_patients(self.master.collected_patients)
-            Functions.update_current_prns_and_ignored_medications(self.patient_object,
-                                                                  self.master.collected_patients,
-                                                                  self.master.loaded_prns_and_ignored_medications)
+            Functions.update_current_prns_and_linked_medications(self.patient_object,
+                                                                 self.master.collected_patients,
+                                                                 self.master.loaded_prns_and_linked_medications)
             self.master.app_observer.update_all()
 
     def add_medication_to_ignore_dict(self, selected_medication: Medication):
         self.patient_object.add_medication_to_ignore_dict(selected_medication)
         Functions.save_collected_patients(self.master.collected_patients)
-        Functions.update_current_prns_and_ignored_medications(self.patient_object,
-                                                              self.master.collected_patients,
-                                                              self.master.loaded_prns_and_ignored_medications)
+        Functions.update_current_prns_and_linked_medications(self.patient_object,
+                                                             self.master.collected_patients,
+                                                             self.master.loaded_prns_and_linked_medications)
         self.master.app_observer.update_all()
 
     def remove_medication_from_ignore_dict(self, selected_medication: Medication):
         if self.patient_object.medications_to_ignore.__contains__(selected_medication.medication_name):
-            correct_dosage_medication: Medication = self.patient_object.medication_dict[
+            correct_dosage_medication: Medication = self.patient_object.production_medications_dict[
                 selected_medication.medication_name]
             self.patient_object.remove_medication_from_ignore_dict(selected_medication, correct_dosage_medication)
             Functions.save_collected_patients(self.master.collected_patients)
-            Functions.update_current_prns_and_ignored_medications(self.patient_object,
-                                                                  self.master.collected_patients,
-                                                                  self.master.loaded_prns_and_ignored_medications)
+            Functions.update_current_prns_and_linked_medications(self.patient_object,
+                                                                 self.master.collected_patients,
+                                                                 self.master.loaded_prns_and_linked_medications)
             self.master.app_observer.update_all()
 
     def update(self):
@@ -1164,7 +1166,7 @@ class PatientMedicationDetails(Frame):
         self.populate_label_frame(self.production_medication_frame,
                                   "Repeat Pillpack Medications",
                                   1,
-                                  self.patient_object.medication_dict
+                                  self.patient_object.production_medications_dict
                                   )
         self.populate_label_frame(self.matched_medication_frame,
                                   "Matched Medications",
@@ -1282,9 +1284,9 @@ class LinkMedication(Toplevel):
     def link_medication(self, selected_medication: Medication):
         self.selected_patient.add_medication_link(self.linking_medication, selected_medication)
         Functions.save_collected_patients(self.application.collected_patients)
-        Functions.update_current_prns_and_ignored_medications(self.selected_patient,
-                                                              self.application.collected_patients,
-                                                              self.application.loaded_prns_and_ignored_medications)
+        Functions.update_current_prns_and_linked_medications(self.selected_patient,
+                                                             self.application.collected_patients,
+                                                             self.application.loaded_prns_and_linked_medications)
         self.application.app_observer.update_all()
 
 
@@ -1322,9 +1324,9 @@ class UnlinkMedication(Toplevel):
                 self.medication_key_to_be_unlinked]
             self.selected_patient.remove_medication_link(medication_in_key)
             Functions.save_collected_patients(self.application.collected_patients)
-            Functions.update_current_prns_and_ignored_medications(self.selected_patient,
-                                                                  self.application.collected_patients,
-                                                                  self.application.loaded_prns_and_ignored_medications)
+            Functions.update_current_prns_and_linked_medications(self.selected_patient,
+                                                                 self.application.collected_patients,
+                                                                 self.application.loaded_prns_and_linked_medications)
             self.application.app_observer.update_all()
 
 
@@ -1456,7 +1458,7 @@ class ScanScripts(Toplevel):
                         if self.patient_tree.exists(patient.first_name + " " + patient.last_name):
                             logging.info("Patient {0} {1} exists within {2}."
                                          .format(patient.first_name, patient.last_name, iterator))
-                            if len(patient.matched_medications_dict) == len(matching_pillpack_patient.medication_dict):
+                            if len(patient.matched_medications_dict) == len(matching_pillpack_patient.production_medications_dict):
                                 self.patient_tree.item(patient.first_name + " " + patient.last_name,
                                                        text=patient.first_name + " " + patient.last_name,
                                                        image=self.ready_to_produce)
@@ -1469,7 +1471,7 @@ class ScanScripts(Toplevel):
                                 logging.info("Patient {0} {1} is awaiting medications."
                                              .format(patient.first_name, patient.last_name))
                         else:
-                            if len(patient.matched_medications_dict) == len(matching_pillpack_patient.medication_dict):
+                            if len(patient.matched_medications_dict) == len(matching_pillpack_patient.production_medications_dict):
                                 logging.info("Patient {0} {1} does not exist within {2}. Creating new tree entry."
                                              .format(patient.first_name, patient.last_name, iterator))
                                 self.patient_tree.insert(tree_parent_id, 'end',
@@ -1621,7 +1623,7 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pi
 
 def populate_pillpack_production_data(application: App):
     application.collected_patients.set_pillpack_patient_dict(
-        Functions.load_pillpack_data(application.loaded_prns_and_ignored_medications)
+        Functions.load_pillpack_data(application.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG)
     )
     Functions.save_collected_patients(application.collected_patients)
 
@@ -1637,8 +1639,8 @@ def archive_pillpack_production_dialog(home_screen: HomeScreen = None):
 def set_pillpack_production_directory():
     directory = filedialog.askdirectory()
     directory = directory.replace("/", "\\")
-    Functions.__modify_pillpack_location(directory)
-    Functions.config = Functions.__load_settings()
+    Functions.modify_pillpack_location(directory)
+    Functions.config = Functions.load_settings()
 
 
 if __name__ == '__main__':
