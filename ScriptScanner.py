@@ -161,8 +161,6 @@ class App(tkinter.Tk):
         self.bind("<<WatchdogEvent>>", self.on_watchdog_event)
         self.filesystem_observer.start()
 
-        # set_appearance_mode("dark")
-
     def show_frame(self, view_name: str, patient_to_view: PillpackPatient = None):
         match view_name:
             case consts.HOME_SCREEN:
