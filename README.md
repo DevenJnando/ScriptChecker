@@ -38,6 +38,6 @@ Future use-cases
 Launching Script Checker
 ============
 The latest release is available in the 'Releases' section of this repo.
-Download the zip, extract, and navigate to the 'scriptScannerGUI.exe' file
-located in the 'scriptScannerGUI.dist' folder. 
+Download the zip, extract, and navigate to the 'ScriptScanner.exe' file
+located in the 'ScriptScanner.dist' folder. 
 The application should then start.
