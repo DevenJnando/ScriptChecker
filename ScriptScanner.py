@@ -134,10 +134,7 @@ class Observer:
 class App(tkinter.Tk):
     def __init__(self):
         super().__init__()
-        path = Functions.config["pillpackDataLocation"]
-        handler = WatchdogEventHandler(self)
         self.filesystem_observer = WatchdogObserver()
-        self.filesystem_observer.schedule(handler, path, recursive=False)
         self.queue = Queue()
         self.style = tkinter.ttk.Style(self)
         self.tk.call("source", themes_dir + "\\" + "forest-dark.tcl")
@@ -153,13 +150,16 @@ class App(tkinter.Tk):
         self.title_font = font.Font(family='Verdana', size=28, weight="bold")
         self.container = Frame(self)
         self.container.pack(side="top", fill="both", expand=True)
+        self.bind("<<WatchdogEvent>>", self.on_watchdog_event)
         if Functions.config["pillpackDataLocation"] == consts.UNSET_LOCATION:
             self.show_frame(consts.VIEW_PILLPACK_FOLDER_LOCATION)
         else:
             self.show_frame(consts.HOME_SCREEN)
-
-        self.bind("<<WatchdogEvent>>", self.on_watchdog_event)
-        self.filesystem_observer.start()
+            handler = WatchdogEventHandler(self)
+            self.filesystem_observer.schedule(handler, Functions.config["pillpackDataLocation"], recursive=False)
+            self.filesystem_observer.start()
+            logging.info("File system observer started in directory {0} successfully."
+                         .format(Functions.config["pillpackDataLocation"]))
 
     def show_frame(self, view_name: str, patient_to_view: PillpackPatient = None):
         match view_name:
@@ -470,8 +470,8 @@ class HomeScreen(Frame):
                                                  columns=self.columns,
                                                  height=10)
         calibrate_width(self.mismatched_patients_tree, self.columns, 125)
-        self.mismatched_patients_tree["displaycolumns"] = (
-        'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+        self.mismatched_patients_tree["displaycolumns"] = \
+            ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
         self.detatched_mismatched_patient_nodes = []
         self.list_of_trees.append([self.mismatched_patients_tree,
                                    self.severe_mismatch_patients,
@@ -809,6 +809,11 @@ class ViewPillpackProductionFolder(Frame):
         logging.info("ViewPillpackProductionFolder update function called.")
         self.folder_location = Functions.config["pillpackDataLocation"]
         self.folder_location_string_var.set(self.folder_location)
+        handler = WatchdogEventHandler(self.master)
+        self.master.filesystem_observer.schedule(handler, Functions.config["pillpackDataLocation"], recursive=False)
+        self.master.filesystem_observer.start()
+        logging.info("File system observer started in directory {0} successfully."
+                     .format(Functions.config["pillpackDataLocation"]))
         logging.info("ViewPillpackProductionFolder update function call complete.")
 
 
@@ -818,8 +823,8 @@ class NoPillpackFolderLocationSetWarning(Toplevel):
         self.geometry("400x200")
         self.attributes('-topmost', 'true')
         self.parent = parent
-        self.warning_label = Label(self, text="It looks like this is your first time using Scriptspector!"
-                                              " Please select where your pillpack ATMS files are located"
+        self.warning_label = Label(self, text="It looks like this is your first time using Script Checker!"
+                                              " Please select where your pillpack production files are located"
                                               " by clicking 'Select pillpack directory' and navigating to the "
                                               " correct folder.",
                                    wraplength=300)
@@ -1646,6 +1651,7 @@ if __name__ == '__main__':
         app = App()
         app.mainloop()
         app.filesystem_observer.stop()
-        app.filesystem_observer.join()
+        if Functions.config["pillpackDataLocation"] != consts.UNSET_LOCATION:
+            app.filesystem_observer.join()
     except E:
         raise

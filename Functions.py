@@ -4,6 +4,7 @@ from functools import reduce
 from os import scandir
 import xml.dom.minidom as minidom
 from zipfile import ZipFile
+from docx import Document
 
 import yaml
 import datetime
