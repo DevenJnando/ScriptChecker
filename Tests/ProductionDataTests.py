@@ -1,9 +1,12 @@
 import datetime
 from functools import reduce
 from xml.dom import minidom
+from Functions.XML import parse_xml, sanitise_and_encode_text_from_file
+from Functions.DAOFunctions import scan_pillpack_folder
+from Functions.ModelBuilder import create_patient_object_from_pillpack_data
 
 import Models
-import Functions
+import Functions.ConfigSingleton
 from TestConsts import consts, populate_test_settings, load_test_settings
 import unittest
 
@@ -13,26 +16,25 @@ class ProductionDataXMLTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         populate_test_settings()
-        Functions.config = load_test_settings()
+        Functions.ConfigSingleton.config = load_test_settings()
 
     def test_xml_location(self):
-        self.assertEqual(Functions.config["pillpackDataLocation"], consts.MOCK_DATA_DIRECTORY)
+        self.assertEqual(Functions.ConfigSingleton.config["pillpackDataLocation"], consts.MOCK_DATA_DIRECTORY)
 
     def test_file_scanning(self):
-        list_of_ppc_processed_files: list = Functions._scan_pillpack_folder(consts.MOCK_DATA_DIRECTORY)
+        list_of_ppc_processed_files: list = scan_pillpack_folder(consts.MOCK_DATA_DIRECTORY)
         self.assertEqual(2, len(list_of_ppc_processed_files))
 
     def test_xml_sanitization(self):
-        strings: list = Functions._sanitise_and_encode_text_from_file(consts.BAD_XML_PPC, consts.PPC_SEPARATING_TAG)
+        strings: list = sanitise_and_encode_text_from_file(consts.BAD_XML_PPC, consts.PPC_SEPARATING_TAG)
         self.assertEqual(3, len(strings))
         for string in strings:
             self.assertEqual("<?xml version=\"1.0\" encoding=\"utf-8\"?>", string.partition('\n')[0].strip())
 
     def test_parse_xml(self):
         xml_data: list = reduce(list.__add__,
-                                Functions._parse_xml(
-                                    Functions._sanitise_and_encode_text_from_file(consts.BAD_XML_PPC,
-                                                                                  consts.PPC_SEPARATING_TAG)))
+                                parse_xml(sanitise_and_encode_text_from_file(consts.BAD_XML_PPC,
+                                                                             consts.PPC_SEPARATING_TAG)))
         self.assertEqual(3, len(xml_data))
         for i in range(len(xml_data)):
             if isinstance(xml_data[i], minidom.Element):
@@ -55,12 +57,12 @@ class ProductionDataXMLTests(unittest.TestCase):
                 self.fail("XML parsing has failed: outer tags cannot be interpreted")
 
     def test_create_patient_from_xml(self):
-        list_of_orders: list = reduce(list.__add__, Functions._parse_xml(
-            Functions._sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
-                                                          consts.PPC_SEPARATING_TAG)
+        list_of_orders: list = reduce(list.__add__, parse_xml(
+            sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
+                                               consts.PPC_SEPARATING_TAG)
         ))
         for order in list_of_orders:
-            patient_object = Functions._create_patient_object(order)
+            patient_object = create_patient_object_from_pillpack_data(order)
             if isinstance(patient_object, Models.PillpackPatient):
                 self.assertEqual("Hogarth", patient_object.first_name)
                 self.assertEqual("Hughes", patient_object.last_name)
@@ -72,12 +74,12 @@ class ProductionDataXMLTests(unittest.TestCase):
                                   type(patient_object)))
 
     def test_create_medications_for_patient_from_xml(self):
-        list_of_orders: list = reduce(list.__add__, Functions._parse_xml(
-            Functions._sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
-                                                          consts.PPC_SEPARATING_TAG)
+        list_of_orders: list = reduce(list.__add__, parse_xml(
+            sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
+                                               consts.PPC_SEPARATING_TAG)
         ))
         for order in list_of_orders:
-            patient_object = Functions._create_patient_object(order)
+            patient_object = create_patient_object_from_pillpack_data(order)
             patient_medications: dict = patient_object.production_medications_dict
             for medication_name in patient_medications.keys():
                 medication: Models.Medication = patient_medications.get(medication_name)

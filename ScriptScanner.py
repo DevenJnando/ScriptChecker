@@ -30,14 +30,19 @@ try:
     from tkinter import font
     from tkinter import filedialog
     from multiprocessing import Queue
+    from Functions.DAOFunctions import (load_collected_patients_from_object,
+                                        load_prns_and_linked_medications_from_object,
+                                        save_collected_patients,
+                                        update_current_prns_and_linked_medications,
+                                        archive_pillpack_production)
+    from Functions.ConfigSingleton import config, modify_pillpack_location, load_settings, set_config
+    from Functions.ModelFactory import get_patient_data_from_specific_file, get_patient_medicine_data
+    from Functions.Mutations import scan_script_and_check_medications
 
     from watchdog.observers import Observer as WatchdogObserver
     from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileCreatedEvent, FileMovedEvent
 
-    import Models
     from Models import PillpackPatient, Medication, CollectedPatients
-    import Functions
-    from Functions import archive_pillpack_production
 except:
     logger.exception(ImportError("Failed to import one or more libraries..."))
     exit(1)
@@ -143,23 +148,23 @@ class App(tkinter.Tk):
         self.title("Pillpack Script Checker")
         self.minsize(1080, 720)
         self.maxsize(1080, 720)
-        self.collected_patients = Functions.load_collected_patients_from_object()
-        self.loaded_prns_and_linked_medications: dict = Functions.load_prns_and_linked_medications_from_object()
+        self.collected_patients = load_collected_patients_from_object()
+        self.loaded_prns_and_linked_medications: dict = load_prns_and_linked_medications_from_object()
         self.app_observer: Observer = Observer()
         self.total_medications = 0
         self.title_font = font.Font(family='Verdana', size=28, weight="bold")
         self.container = Frame(self)
         self.container.pack(side="top", fill="both", expand=True)
         self.bind("<<WatchdogEvent>>", self.on_watchdog_event)
-        if Functions.config["pillpackDataLocation"] == consts.UNSET_LOCATION:
+        if config["pillpackDataLocation"] == consts.UNSET_LOCATION:
             self.show_frame(consts.VIEW_PILLPACK_FOLDER_LOCATION)
         else:
             self.show_frame(consts.HOME_SCREEN)
             handler = WatchdogEventHandler(self)
-            self.filesystem_observer.schedule(handler, Functions.config["pillpackDataLocation"], recursive=False)
+            self.filesystem_observer.schedule(handler, config["pillpackDataLocation"], recursive=False)
             self.filesystem_observer.start()
             logging.info("File system observer started in directory {0} successfully."
-                         .format(Functions.config["pillpackDataLocation"]))
+                         .format(config["pillpackDataLocation"]))
 
     def show_frame(self, view_name: str, patient_to_view: PillpackPatient = None):
         match view_name:
@@ -235,7 +240,7 @@ class App(tkinter.Tk):
         file_extension = full_path.rsplit('.')[1]
         if file_extension == "ppc_processed":
             logging.info("The modified file has a ppc_processed file extension. Executing patient(s) update...")
-            list_of_patients = (Functions.get_patient_data_from_specific_file
+            list_of_patients = (get_patient_data_from_specific_file
                                 (self.loaded_prns_and_linked_medications, file_name, "OrderInfo"))
             for patient in list_of_patients:
                 if isinstance(patient, PillpackPatient):
@@ -269,7 +274,7 @@ class App(tkinter.Tk):
                         self.collected_patients.remove_severely_mismatched_patient(patient)
                 else:
                     logging.warning("Object {0} is not of type PillpackPatient".format(patient))
-            Functions.save_collected_patients(self.collected_patients)
+            save_collected_patients(self.collected_patients)
             self.app_observer.update_all()
 
     def notify(self, event):
@@ -783,7 +788,7 @@ class ViewPillpackProductionFolder(Frame):
         self.master: App = master
         self.descriptor_font = font.Font(family='Verdana', size=20, weight="bold")
         self.folder_location_font = font.Font(family='Verdana', size=14, weight="normal")
-        self.folder_location = Functions.config["pillpackDataLocation"]
+        self.folder_location = config["pillpackDataLocation"]
         side_bar = SideBar(self, self.master)
         side_bar.pack(side="left", fill="both")
         container_frame = tkinter.ttk.Frame(self)
@@ -800,20 +805,20 @@ class ViewPillpackProductionFolder(Frame):
                                                        command=lambda: [set_pillpack_production_directory(),
                                                                         self.update()])
         self.change_pillpack_directory_button.grid(row=2, column=0, pady=50)
-        if Functions.config["pillpackDataLocation"] == consts.UNSET_LOCATION:
+        if config["pillpackDataLocation"] == consts.UNSET_LOCATION:
             warning_message: NoPillpackFolderLocationSetWarning = NoPillpackFolderLocationSetWarning(self)
             warning_message.grab_set()
             logging.warning("No directory for pillpack data has been set by the user.")
 
     def update(self):
         logging.info("ViewPillpackProductionFolder update function called.")
-        self.folder_location = Functions.config["pillpackDataLocation"]
+        self.folder_location = config["pillpackDataLocation"]
         self.folder_location_string_var.set(self.folder_location)
         handler = WatchdogEventHandler(self.master)
-        self.master.filesystem_observer.schedule(handler, Functions.config["pillpackDataLocation"], recursive=False)
+        self.master.filesystem_observer.schedule(handler, config["pillpackDataLocation"], recursive=False)
         self.master.filesystem_observer.start()
         logging.info("File system observer started in directory {0} successfully."
-                     .format(Functions.config["pillpackDataLocation"]))
+                     .format(config["pillpackDataLocation"]))
         logging.info("ViewPillpackProductionFolder update function call complete.")
 
 
@@ -919,7 +924,7 @@ class PatientMedicationDetails(Frame):
     def _on_manually_checked_button_click(self):
         self.patient_object.manually_checked(not self.patient_object.manually_checked_flag)
         logging.info("Patient Manually checked flag set to: {0}". format(self.patient_object.manually_checked_flag))
-        Functions.save_collected_patients(self.master.collected_patients)
+        save_collected_patients(self.master.collected_patients)
         self.master.app_observer.update_all()
 
     def _refresh_patient_status(self):
@@ -1117,10 +1122,10 @@ class PatientMedicationDetails(Frame):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
         self.patient_object.add_medication_to_prn_dict(selected_medication)
-        Functions.save_collected_patients(self.master.collected_patients)
-        Functions.update_current_prns_and_linked_medications(self.patient_object,
-                                                             self.master.collected_patients,
-                                                             self.master.loaded_prns_and_linked_medications)
+        save_collected_patients(self.master.collected_patients)
+        update_current_prns_and_linked_medications(self.patient_object,
+                                                   self.master.collected_patients,
+                                                   self.master.loaded_prns_and_linked_medications)
         self.master.app_observer.update_all()
 
     def remove_prn_medication(self, selected_medication: Medication):
@@ -1130,18 +1135,18 @@ class PatientMedicationDetails(Frame):
                 self.patient_object.add_medication_to_missing_dict(selected_medication)
             else:
                 self.patient_object.add_medication_to_unknown_dict(selected_medication)
-            Functions.save_collected_patients(self.master.collected_patients)
-            Functions.update_current_prns_and_linked_medications(self.patient_object,
-                                                                 self.master.collected_patients,
-                                                                 self.master.loaded_prns_and_linked_medications)
+            save_collected_patients(self.master.collected_patients)
+            update_current_prns_and_linked_medications(self.patient_object,
+                                                       self.master.collected_patients,
+                                                       self.master.loaded_prns_and_linked_medications)
             self.master.app_observer.update_all()
 
     def add_medication_to_ignore_dict(self, selected_medication: Medication):
         self.patient_object.add_medication_to_ignore_dict(selected_medication)
-        Functions.save_collected_patients(self.master.collected_patients)
-        Functions.update_current_prns_and_linked_medications(self.patient_object,
-                                                             self.master.collected_patients,
-                                                             self.master.loaded_prns_and_linked_medications)
+        save_collected_patients(self.master.collected_patients)
+        update_current_prns_and_linked_medications(self.patient_object,
+                                                   self.master.collected_patients,
+                                                   self.master.loaded_prns_and_linked_medications)
         self.master.app_observer.update_all()
 
     def remove_medication_from_ignore_dict(self, selected_medication: Medication):
@@ -1149,10 +1154,10 @@ class PatientMedicationDetails(Frame):
             correct_dosage_medication: Medication = self.patient_object.production_medications_dict[
                 selected_medication.medication_name]
             self.patient_object.remove_medication_from_ignore_dict(selected_medication, correct_dosage_medication)
-            Functions.save_collected_patients(self.master.collected_patients)
-            Functions.update_current_prns_and_linked_medications(self.patient_object,
-                                                                 self.master.collected_patients,
-                                                                 self.master.loaded_prns_and_linked_medications)
+            save_collected_patients(self.master.collected_patients)
+            update_current_prns_and_linked_medications(self.patient_object,
+                                                       self.master.collected_patients,
+                                                       self.master.loaded_prns_and_linked_medications)
             self.master.app_observer.update_all()
 
     def update(self):
@@ -1286,10 +1291,10 @@ class LinkMedication(Toplevel):
 
     def link_medication(self, selected_medication: Medication):
         self.selected_patient.add_medication_link(self.linking_medication, selected_medication)
-        Functions.save_collected_patients(self.application.collected_patients)
-        Functions.update_current_prns_and_linked_medications(self.selected_patient,
-                                                             self.application.collected_patients,
-                                                             self.application.loaded_prns_and_linked_medications)
+        save_collected_patients(self.application.collected_patients)
+        update_current_prns_and_linked_medications(self.selected_patient,
+                                                   self.application.collected_patients,
+                                                   self.application.loaded_prns_and_linked_medications)
         self.application.app_observer.update_all()
 
 
@@ -1326,10 +1331,10 @@ class UnlinkMedication(Toplevel):
             medication_in_key: Medication = self.selected_patient.matched_medications_dict[
                 self.medication_key_to_be_unlinked]
             self.selected_patient.remove_medication_link(medication_in_key)
-            Functions.save_collected_patients(self.application.collected_patients)
-            Functions.update_current_prns_and_linked_medications(self.selected_patient,
-                                                                 self.application.collected_patients,
-                                                                 self.application.loaded_prns_and_linked_medications)
+            save_collected_patients(self.application.collected_patients)
+            update_current_prns_and_linked_medications(self.selected_patient,
+                                                       self.application.collected_patients,
+                                                       self.application.loaded_prns_and_linked_medications)
             self.application.app_observer.update_all()
 
 
@@ -1422,7 +1427,7 @@ class ScanScripts(Toplevel):
 
     def scan_scripts(self, application: App, script_input: str):
         logging.info("Scanning script...")
-        if Functions.scan_script_and_check_medications(application.collected_patients, script_input):
+        if scan_script_and_check_medications(application.collected_patients, script_input):
             logging.info("Patient information retrieved from scanned script successfully.")
             self.patient_tree.set('perfect_matches', 'No. of Patients',
                                   str(len(self.main_application.collected_patients.matched_patients)) + "/"
@@ -1626,9 +1631,9 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pi
 
 def populate_pillpack_production_data(application: App):
     application.collected_patients.set_pillpack_patient_dict(
-        Functions.load_pillpack_data(application.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG)
+        get_patient_medicine_data(application.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG)
     )
-    Functions.save_collected_patients(application.collected_patients)
+    save_collected_patients(application.collected_patients)
 
 
 def archive_pillpack_production_dialog(home_screen: HomeScreen = None):
@@ -1642,8 +1647,8 @@ def archive_pillpack_production_dialog(home_screen: HomeScreen = None):
 def set_pillpack_production_directory():
     directory = filedialog.askdirectory()
     directory = directory.replace("/", "\\")
-    Functions.modify_pillpack_location(directory)
-    Functions.config = Functions.load_settings()
+    modify_pillpack_location(directory)
+    set_config(load_settings())
 
 
 if __name__ == '__main__':
@@ -1651,7 +1656,7 @@ if __name__ == '__main__':
         app = App()
         app.mainloop()
         app.filesystem_observer.stop()
-        if Functions.config["pillpackDataLocation"] != consts.UNSET_LOCATION:
+        if config["pillpackDataLocation"] != consts.UNSET_LOCATION:
             app.filesystem_observer.join()
     except E:
         raise

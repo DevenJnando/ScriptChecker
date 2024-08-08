@@ -33,6 +33,10 @@ class Medication:
         self.medication_name: str = medication_name
         self.dosage: float = dosage
         self.start_date: datetime = start_date
+        self.morning_dosage = None
+        self.afternoon_dosage = None
+        self.evening_dosage = None
+        self.night_dosage = None
 
     def dosage_equals(self, comparator):
         if isinstance(comparator, Medication):
@@ -47,11 +51,12 @@ class Medication:
 
 
 class PillpackPatient:
-    def __init__(self, first_name, last_name, date_of_birth):
+    def __init__(self, first_name, last_name, date_of_birth, surgery: str = None):
         self.first_name: str = first_name
         self.last_name: str = last_name
         self.date_of_birth: datetime.date = date_of_birth
         self.start_date: datetime = datetime.date.today()
+        self.surgery: str = surgery
         self.manually_checked_flag: bool = False
         self.ready_to_produce_code: int = 0
         self.production_medications_dict: dict = {}
