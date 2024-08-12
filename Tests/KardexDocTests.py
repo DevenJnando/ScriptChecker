@@ -1,5 +1,4 @@
 import unittest
-import Functions.ConfigSingleton
 from functools import reduce
 from Functions import DocxGeneration
 from TestConsts import populate_test_settings, load_test_settings, consts
@@ -11,10 +10,10 @@ class KardexDocTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         populate_test_settings()
-        Functions.ConfigSingleton.config = load_test_settings()
+        config = load_test_settings()
         list_of_orders: list = reduce(list.__add__, parse_xml(
             sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML_2,
-                                               consts.PPC_SEPARATING_TAG)
+                                               consts.PPC_SEPARATING_TAG, config)
         ))
         for order in list_of_orders:
             cls.mock_patient = create_patient_object_from_pillpack_data(order)

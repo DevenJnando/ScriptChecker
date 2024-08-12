@@ -1,8 +1,7 @@
 import unittest
-import Functions.ConfigSingleton
 
 from Functions.DAOFunctions import save_to_file, load_object
-from TestConsts import consts, load_test_settings, populate_test_settings
+from TestConsts import consts, populate_test_settings
 
 
 class DataObjectSaveLoadTests(unittest.TestCase):
@@ -10,7 +9,6 @@ class DataObjectSaveLoadTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         populate_test_settings()
-        Functions.ConfigSingleton.config = load_test_settings()
         cls.mock_object = {
             "Truly, we do live": "In the strangest of ages",
             "Are we cursed": "Or blessed?"

@@ -4,8 +4,6 @@ import sys
 import xml
 from xml.dom import minidom
 
-from Functions.ConfigSingleton import config
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
@@ -44,7 +42,7 @@ def parse_xml(list_of_orders_raw_text: list):
     return order_information
 
 
-def sanitise_and_encode_text_from_file(filename: str, separating_tag: str):
+def sanitise_and_encode_text_from_file(filename: str, separating_tag: str, config):
     if config is not None:
         raw_file = None
         list_of_strings = None

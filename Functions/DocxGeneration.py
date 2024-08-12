@@ -106,9 +106,9 @@ def _merge_alternating_row_cells(table, bottom_range: int, top_range: int, first
 
 
 def _merge_row_then_alternating_cells(table, single_merge_bottom_range: int, single_merge_top_range: int,
-                                     first_single_cell: int, second_single_cell: int,
-                                     alternating_merge_bottom_range: int, alternating_merge_top_range: int,
-                                     alternating_merge_length: int):
+                                      first_single_cell: int, second_single_cell: int,
+                                      alternating_merge_bottom_range: int, alternating_merge_top_range: int,
+                                      alternating_merge_length: int):
     for i in range(single_merge_bottom_range, single_merge_top_range):
         cell_a = table.cell(i, first_single_cell)
         cell_b = table.cell(i, second_single_cell)

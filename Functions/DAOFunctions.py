@@ -3,7 +3,7 @@ import pickle
 import sys
 from os import scandir
 from zipfile import ZipFile
-from Functions.ConfigSingleton import config, consts
+from Functions.ConfigSingleton import consts
 from Models import PillpackPatient
 from Repositories import CollectedPatients
 
@@ -27,7 +27,7 @@ def scan_pillpack_folder(filepath: str):
     return list(filter(lambda entity: entity.is_file() and entity.name.split(".")[1] == "ppc_processed", entities))
 
 
-def archive_pillpack_production(archive_file):
+def archive_pillpack_production(archive_file, config):
     if config is not None:
         ppc_processed_files = scan_pillpack_folder(config["pillpackDataLocation"])
         pillpack_directory = config["pillpackDataLocation"] + "\\"

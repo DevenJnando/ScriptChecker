@@ -50,13 +50,13 @@ bookmark_constants.PRODUCTION_VIEW = 0
 bookmark_constants.PERFECTLY_MATCHED_PATIENTS_VIEW = 1
 bookmark_constants.MINOR_MISMATCH_PATIENTS_VIEW = 2
 bookmark_constants.SEVERE_MISMATCH_PATIENTS_VIEW = 3
+if getattr(sys, 'frozen', False):
+    application_path = os.path.dirname(sys.executable)
+else:
+    application_path = os.path.dirname(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 
 
 def load_settings():
-    if getattr(sys, 'frozen', False):
-        application_path = os.path.dirname(sys.executable)
-    else:
-        application_path = os.path.dirname(os.path.abspath(os.path.join(os.path.dirname(__file__))))
     with open(application_path + "\\settings.yaml", 'r') as file:
         settings = file.read()
     return yaml.safe_load(settings)
@@ -64,17 +64,5 @@ def load_settings():
 
 def modify_pillpack_location(new_location: str):
     location_json = {"pillpackDataLocation": new_location}
-    if getattr(sys, 'frozen', False):
-        application_path = os.path.dirname(sys.executable)
-    else:
-        application_path = os.path.dirname(os.path.abspath(__file__))
     with open(application_path + "\\settings.yaml", 'w') as file:
         yaml.dump(location_json, file, sort_keys=False)
-
-
-config = load_settings()
-
-
-def set_config(settings):
-    global config
-    config = settings

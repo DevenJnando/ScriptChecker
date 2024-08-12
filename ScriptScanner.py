@@ -35,7 +35,7 @@ try:
                                         save_collected_patients,
                                         update_current_prns_and_linked_medications,
                                         archive_pillpack_production)
-    from Functions.ConfigSingleton import config, modify_pillpack_location, load_settings, set_config
+    from Functions.ConfigSingleton import modify_pillpack_location, load_settings
     from Functions.ModelFactory import get_patient_data_from_specific_file, get_patient_medicine_data
     from Functions.Mutations import scan_script_and_check_medications
 
@@ -139,7 +139,9 @@ class Observer:
 class App(tkinter.Tk):
     def __init__(self):
         super().__init__()
+        self.config = load_settings()
         self.filesystem_observer = WatchdogObserver()
+        self.current_directory_to_watch = None
         self.queue = Queue()
         self.style = tkinter.ttk.Style(self)
         self.tk.call("source", themes_dir + "\\" + "forest-dark.tcl")
@@ -156,15 +158,16 @@ class App(tkinter.Tk):
         self.container = Frame(self)
         self.container.pack(side="top", fill="both", expand=True)
         self.bind("<<WatchdogEvent>>", self.on_watchdog_event)
-        if config["pillpackDataLocation"] == consts.UNSET_LOCATION:
+        if self.config["pillpackDataLocation"] == consts.UNSET_LOCATION:
             self.show_frame(consts.VIEW_PILLPACK_FOLDER_LOCATION)
         else:
             self.show_frame(consts.HOME_SCREEN)
             handler = WatchdogEventHandler(self)
-            self.filesystem_observer.schedule(handler, config["pillpackDataLocation"], recursive=False)
+            self.current_directory_to_watch = (
+                self.filesystem_observer.schedule(handler, self.config["pillpackDataLocation"], recursive=False))
             self.filesystem_observer.start()
             logging.info("File system observer started in directory {0} successfully."
-                         .format(config["pillpackDataLocation"]))
+                         .format(self.config["pillpackDataLocation"]))
 
     def show_frame(self, view_name: str, patient_to_view: PillpackPatient = None):
         match view_name:
@@ -788,7 +791,7 @@ class ViewPillpackProductionFolder(Frame):
         self.master: App = master
         self.descriptor_font = font.Font(family='Verdana', size=20, weight="bold")
         self.folder_location_font = font.Font(family='Verdana', size=14, weight="normal")
-        self.folder_location = config["pillpackDataLocation"]
+        self.folder_location = self.master.config["pillpackDataLocation"]
         side_bar = SideBar(self, self.master)
         side_bar.pack(side="left", fill="both")
         container_frame = tkinter.ttk.Frame(self)
@@ -802,23 +805,25 @@ class ViewPillpackProductionFolder(Frame):
                                            textvariable=self.folder_location_string_var)
         self.folder_location_label.grid(row=1, column=0)
         self.change_pillpack_directory_button = Button(container_frame, text="Select pillpack directory",
-                                                       command=lambda: [set_pillpack_production_directory(),
+                                                       command=lambda: [set_pillpack_production_directory(self.master),
                                                                         self.update()])
         self.change_pillpack_directory_button.grid(row=2, column=0, pady=50)
-        if config["pillpackDataLocation"] == consts.UNSET_LOCATION:
+        if self.master.config["pillpackDataLocation"] == consts.UNSET_LOCATION:
             warning_message: NoPillpackFolderLocationSetWarning = NoPillpackFolderLocationSetWarning(self)
             warning_message.grab_set()
             logging.warning("No directory for pillpack data has been set by the user.")
 
     def update(self):
         logging.info("ViewPillpackProductionFolder update function called.")
-        self.folder_location = config["pillpackDataLocation"]
+        self.folder_location = self.master.config["pillpackDataLocation"]
         self.folder_location_string_var.set(self.folder_location)
         handler = WatchdogEventHandler(self.master)
-        self.master.filesystem_observer.schedule(handler, config["pillpackDataLocation"], recursive=False)
-        self.master.filesystem_observer.start()
+        self.master.filesystem_observer.unschedule(self.master.current_directory_to_watch)
+        self.master.current_directory_to_watch = (
+            self.master.filesystem_observer.schedule(handler, self.master.config["pillpackDataLocation"],
+                                                     recursive=False))
         logging.info("File system observer started in directory {0} successfully."
-                     .format(config["pillpackDataLocation"]))
+                     .format(self.master.config["pillpackDataLocation"]))
         logging.info("ViewPillpackProductionFolder update function call complete.")
 
 
@@ -1631,7 +1636,7 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pi
 
 def populate_pillpack_production_data(application: App):
     application.collected_patients.set_pillpack_patient_dict(
-        get_patient_medicine_data(application.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG)
+        get_patient_medicine_data(application.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG, application.config)
     )
     save_collected_patients(application.collected_patients)
 
@@ -1639,16 +1644,16 @@ def populate_pillpack_production_data(application: App):
 def archive_pillpack_production_dialog(home_screen: HomeScreen = None):
     archive_file = filedialog.asksaveasfile(initialfile="Untitled.zip", defaultextension=".zip",
                                             filetypes=[("All files", ".*"), ("ZIP files", ".zip")])
-    archive_pillpack_production(archive_file)
+    archive_pillpack_production(archive_file, home_screen.master.config)
     if home_screen is not None:
         home_screen.threaded_production_data_retrieval()
 
 
-def set_pillpack_production_directory():
+def set_pillpack_production_directory(application: App):
     directory = filedialog.askdirectory()
     directory = directory.replace("/", "\\")
     modify_pillpack_location(directory)
-    set_config(load_settings())
+    application.config = load_settings()
 
 
 if __name__ == '__main__':
@@ -1656,7 +1661,7 @@ if __name__ == '__main__':
         app = App()
         app.mainloop()
         app.filesystem_observer.stop()
-        if config["pillpackDataLocation"] != consts.UNSET_LOCATION:
+        if app.config["pillpackDataLocation"] != consts.UNSET_LOCATION:
             app.filesystem_observer.join()
     except E:
         raise
