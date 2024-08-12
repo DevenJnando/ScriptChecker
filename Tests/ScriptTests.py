@@ -1,7 +1,6 @@
 import unittest
 from xml.dom import minidom
 
-import Functions.ConfigSingleton
 from TestConsts import consts, load_test_settings, populate_test_settings
 from Functions.XML import scan_script
 
@@ -10,7 +9,7 @@ class ScriptTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         populate_test_settings()
-        Functions.ConfigSingleton.config = load_test_settings()
+        cls.config = load_test_settings()
         with open(consts.MOCK_DATA_DIRECTORY + "\\" + consts.MOCK_SCRIPT_XML) as script_file:
             cls.mock_script = script_file.read()
 

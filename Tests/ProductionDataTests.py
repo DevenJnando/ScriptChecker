@@ -6,7 +6,6 @@ from Functions.DAOFunctions import scan_pillpack_folder
 from Functions.ModelBuilder import create_patient_object_from_pillpack_data
 
 import Models
-from Functions.ConfigSingleton import config, set_config
 from TestConsts import consts, populate_test_settings, load_test_settings
 import unittest
 
@@ -16,17 +15,17 @@ class ProductionDataXMLTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         populate_test_settings()
-        set_config(load_test_settings())
+        cls.config = load_test_settings()
 
     def test_xml_location(self):
-        self.assertEqual(config["pillpackDataLocation"], consts.MOCK_DATA_DIRECTORY)
+        self.assertEqual(self.config["pillpackDataLocation"], consts.MOCK_DATA_DIRECTORY)
 
     def test_file_scanning(self):
         list_of_ppc_processed_files: list = scan_pillpack_folder(consts.MOCK_DATA_DIRECTORY)
-        self.assertEqual(2, len(list_of_ppc_processed_files))
+        self.assertEqual(3, len(list_of_ppc_processed_files))
 
     def test_xml_sanitization(self):
-        strings: list = sanitise_and_encode_text_from_file(consts.BAD_XML_PPC, consts.PPC_SEPARATING_TAG)
+        strings: list = sanitise_and_encode_text_from_file(consts.BAD_XML_PPC, consts.PPC_SEPARATING_TAG, self.config)
         self.assertEqual(3, len(strings))
         for string in strings:
             self.assertEqual("<?xml version=\"1.0\" encoding=\"utf-8\"?>", string.partition('\n')[0].strip())
@@ -34,7 +33,7 @@ class ProductionDataXMLTests(unittest.TestCase):
     def test_parse_xml(self):
         xml_data: list = reduce(list.__add__,
                                 parse_xml(sanitise_and_encode_text_from_file(consts.BAD_XML_PPC,
-                                                                             consts.PPC_SEPARATING_TAG, config)))
+                                                                             consts.PPC_SEPARATING_TAG, self.config)))
         self.assertEqual(3, len(xml_data))
         for i in range(len(xml_data)):
             if isinstance(xml_data[i], minidom.Element):
@@ -59,7 +58,7 @@ class ProductionDataXMLTests(unittest.TestCase):
     def test_create_patient_from_xml(self):
         list_of_orders: list = reduce(list.__add__, parse_xml(
             sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
-                                               consts.PPC_SEPARATING_TAG, config)
+                                               consts.PPC_SEPARATING_TAG, self.config)
         ))
         for order in list_of_orders:
             patient_object = create_patient_object_from_pillpack_data(order)
@@ -76,7 +75,7 @@ class ProductionDataXMLTests(unittest.TestCase):
     def test_create_medications_for_patient_from_xml(self):
         list_of_orders: list = reduce(list.__add__, parse_xml(
             sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
-                                               consts.PPC_SEPARATING_TAG, config)
+                                               consts.PPC_SEPARATING_TAG, self.config)
         ))
         for order in list_of_orders:
             patient_object = create_patient_object_from_pillpack_data(order)

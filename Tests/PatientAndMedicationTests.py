@@ -7,7 +7,6 @@ from Functions.ModelBuilder import (create_patient_object_from_pillpack_data,
                                     get_specified_medication_take_times)
 from Functions.DAOFunctions import retrieve_prns_and_linked_medications
 import Models
-from Functions.ConfigSingleton import config, set_config
 import datetime
 
 
@@ -16,7 +15,6 @@ class PatientAndMedicationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         populate_test_settings()
-        set_config(load_test_settings())
         mock_prn_1: Models.Medication = Models.Medication("Not real",
                                                           28,
                                                           datetime.date.fromisoformat("2024-08-22")
@@ -42,7 +40,7 @@ class PatientAndMedicationTests(unittest.TestCase):
         }
         cls.list_of_orders: list = reduce(list.__add__, parse_xml(
             sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
-                                               consts.PPC_SEPARATING_TAG, config)
+                                               consts.PPC_SEPARATING_TAG, load_test_settings())
         ))
 
     def test_retrieve_prns_and_linked_medications(self):
@@ -104,10 +102,10 @@ class PatientAndMedicationTests(unittest.TestCase):
         get_specified_medication_take_times("13H30", 1, mock_medication)
         get_specified_medication_take_times("18H00", 1, mock_medication)
         get_specified_medication_take_times("21H00", 1, mock_medication)
-        self.assertEqual("1 (8:00)", mock_medication.morning_dosage)
-        self.assertEqual("1 (13:30)", mock_medication.afternoon_dosage)
-        self.assertEqual("1 (18:00)", mock_medication.evening_dosage)
-        self.assertEqual("1 (21:00)", mock_medication.night_dosage)
+        self.assertEqual("1\n(8:00)", mock_medication.morning_dosage)
+        self.assertEqual("1\n(13:30)", mock_medication.afternoon_dosage)
+        self.assertEqual("1\n(18:00)", mock_medication.evening_dosage)
+        self.assertEqual("1\n(21:00)", mock_medication.night_dosage)
 
 
 if __name__ == '__main__':
