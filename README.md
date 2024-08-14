@@ -41,3 +41,5 @@ The latest release is available in the 'Releases' section of this repo.
 Download the zip, extract, and navigate to the 'scriptScannerGUI.exe' file
 located in the 'scriptScannerGUI.dist' folder. 
 The application should then start.
+
+Note: This application is currently only compatible with Windows.

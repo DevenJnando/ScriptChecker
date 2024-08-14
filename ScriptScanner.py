@@ -25,6 +25,7 @@ try:
     import types
     import typing
     from functools import reduce
+    from tkcalendar import Calendar
     from tkinter.ttk import Treeview
     from tkinter import *
     from tkinter import font
@@ -244,7 +245,9 @@ class App(tkinter.Tk):
         if file_extension == "ppc_processed":
             logging.info("The modified file has a ppc_processed file extension. Executing patient(s) update...")
             list_of_patients = (get_patient_data_from_specific_file
-                                (self.loaded_prns_and_linked_medications, file_name, "OrderInfo"))
+                                (self.loaded_prns_and_linked_medications, file_name,
+                                 "OrderInfo",
+                                 self.master.config))
             for patient in list_of_patients:
                 if isinstance(patient, PillpackPatient):
                     patient_exists: bool = self.collected_patients.update_pillpack_patient_dict(patient)
@@ -337,10 +340,6 @@ class HomeScreen(Frame):
         self.master: App = master
         warning_image_path = icons_dir + "\\warning.png"
         warning_image = PhotoImage(file=warning_image_path)
-        self.loading_message_thread: threading.Thread = threading.Thread(target=self.execute_loading_message)
-        self.get_production_thread = threading.Thread(target=self.threaded_get_production_data)
-        self.delete_loading_message_thread = threading.Thread(target=self.delete_loading_message)
-        self.update_thread = threading.Thread(target=self.threaded_update)
         self.warning_image = warning_image.subsample(30, 30)
         ready_to_produce_path = icons_dir + "\\check.png"
         ready_to_produce = PhotoImage(file=ready_to_produce_path)
@@ -372,7 +371,7 @@ class HomeScreen(Frame):
         load_pillpack_button = Button(options_frame, image=self.pillpack_button_image,
                                       command=lambda: display_warning_if_pillpack_data_is_not_empty
                                       (self.master,
-                                       self.threaded_production_data_retrieval,
+                                       self.open_populate_patients_window,
                                        warning_constants.PILLPACK_DATA_OVERWRITE_WARNING)
                                       )
         load_pillpack_label.grid(row=1, column=0, sticky="nsew")
@@ -493,51 +492,7 @@ class HomeScreen(Frame):
 
         self.update()
         self.script_window = None
-
-    def threaded_production_data_retrieval(self):
-        self.loading_message_thread: threading.Thread = threading.Thread(target=self.execute_loading_message)
-        self.get_production_thread = threading.Thread(target=self.threaded_get_production_data)
-        self.delete_loading_message_thread = threading.Thread(target=self.delete_loading_message)
-        self.update_thread = threading.Thread(target=self.threaded_update)
-        for thread in [self.loading_message_thread, self.get_production_thread,
-                       self.delete_loading_message_thread, self.update_thread]:
-            thread.daemon = True
-            thread.start()
-
-    def threaded_get_production_data(self):
-        self.loading_message_thread.join()
-        logging.info("Loading message thread finished.")
-        self.master.collected_patients = CollectedPatients()
-        populate_pillpack_production_data(self.master)
-        return
-
-    def execute_loading_message(self):
-        for trees_results_and_dicts in self.list_of_trees:
-            tree: Treeview = trees_results_and_dicts[0]
-            key = "loading"
-            tree.delete(*tree.get_children())
-            tree.insert('', 'end', key, text=key)
-            tree.set(key, 'First Name', "Loading...")
-            tree.set(key, 'Last Name', "Loading...")
-            tree.set(key, 'Date of Birth', "Loading...")
-            tree.set(key, 'Start Date', "Loading...")
-            tree.set(key, 'No. of Medications', "Loading...")
-            tree.set(key, 'Condition', "Loading...")
-
-    def delete_loading_message(self):
-        self.get_production_thread.join()
-        logging.info("Production data re-population finished.")
-        for trees_results_and_dicts in self.list_of_trees:
-            tree: Treeview = trees_results_and_dicts[0]
-            key = "loading"
-            tree.delete(key)
-        return
-
-    def threaded_update(self):
-        self.delete_loading_message_thread.join()
-        logging.info("Loading message removed from tree.")
-        self.update()
-        return
+        self.populate_patients_window = None
 
     def _update_list_of_trees(self):
         self.list_of_trees[0] = ([self.production_patients_tree,
@@ -718,6 +673,15 @@ class HomeScreen(Frame):
             logging.info("Scan Scripts view is now in focus.")
             self.script_window.focus()
 
+    def open_populate_patients_window(self):
+        if self.populate_patients_window is None or not self.populate_patients_window.winfo_exists():
+            logging.info("No Populate Patients view has been instatiated. Creating new Populate Patients view...")
+            self.populate_patients_window = PopulatePatientData(self, self.master)
+            self.populate_patients_window.grab_set()
+        else:
+            logging.info("Populate Patients view is now in focus.")
+            self.populate_patients_window.focus()
+
     def _on_filter_selected(self, selected_filter: str, treeview_to_filter: Treeview, dictionary_to_reference: dict,
                             tree_index: int):
         match selected_filter:
@@ -783,6 +747,93 @@ class HomeScreen(Frame):
                                       .format(selected_patient))
             except IndexError as e:
                 logging.error("Thrown IndexError: {0}".format(e))
+
+
+class PopulatePatientData(Toplevel):
+    def __init__(self, parent, master: App):
+        super().__init__(parent)
+        self.geometry("600x400")
+        self.attributes('-topmost', 'true')
+        self.parent = parent
+        self.master: App = master
+        self.loading_message_thread: threading.Thread = threading.Thread(target=self.execute_loading_message)
+        self.get_production_thread = threading.Thread(target=self.threaded_get_production_data)
+        self.delete_loading_message_thread = threading.Thread(target=self.delete_loading_message)
+        self.update_thread = threading.Thread(target=self.threaded_update)
+        self.production_group_label = Label(self, text="Pillpack Production Group Name:", wraplength=200)
+        self.production_group_input = Entry(self, width=20)
+        self.production_date_label = Label(self, text="Start Date for Group", wraplength=200)
+        self.production_date_calendar = Calendar(self, selectmode="day", year=datetime.date.today().year,
+                                                 month=datetime.date.today().month,
+                                                 day=datetime.date.today().day, date_pattern='y-mm-dd')
+        self.production_scan_dir_button = Button(self, text="Scan for Patients",
+                                                 command=lambda:
+                                                 self.verify_group_name(
+                                                     datetime.date.fromisoformat(
+                                                         self.production_date_calendar.get_date())
+                                                    )
+                                                 )
+        self.production_group_label.grid(row=0, column=0, padx=25, pady=30)
+        self.production_group_input.grid(row=0, column=1, padx=25, pady=30)
+        self.production_date_label.grid(row=1, column=0, padx=25, pady=30)
+        self.production_date_calendar.grid(row=1, column=1, padx=25, pady=30)
+        self.production_scan_dir_button.grid(row=2, column=0, padx=50, pady=30)
+
+    def verify_group_name(self, earliest_start_date: datetime.date = None):
+        if self.production_group_input.get() == "" or self.production_group_input.get() is None:
+            enter_group_name_message = Label(self, text="*Group name is required", fg="red")
+            enter_group_name_message.grid(row=0, column=2, padx=10, pady=30)
+        else:
+            for child in self.winfo_children():
+                child.configure(state='disabled')
+            self.production_scan_dir_button.configure(text="Loading...")
+            self.threaded_production_data_retrieval(earliest_start_date)
+
+    def threaded_production_data_retrieval(self, earliest_start_date: datetime.date = None):
+        self.loading_message_thread: threading.Thread = threading.Thread(target=self.execute_loading_message)
+        self.get_production_thread = threading.Thread(
+            target=lambda: self.threaded_get_production_data(earliest_start_date))
+        self.delete_loading_message_thread = threading.Thread(target=self.delete_loading_message)
+        self.update_thread = threading.Thread(target=self.threaded_update)
+        for thread in [self.loading_message_thread, self.get_production_thread,
+                       self.delete_loading_message_thread, self.update_thread]:
+            thread.daemon = True
+            thread.start()
+
+    def threaded_get_production_data(self, earilest_start_date: datetime.date = None):
+        self.loading_message_thread.join()
+        logging.info("Loading message thread finished.")
+        self.master.collected_patients = CollectedPatients()
+        populate_pillpack_production_data(self.master, earliest_start_date=earilest_start_date)
+        return
+
+    def execute_loading_message(self):
+        for trees_results_and_dicts in self.parent.list_of_trees:
+            tree: Treeview = trees_results_and_dicts[0]
+            key = "loading"
+            tree.delete(*tree.get_children())
+            tree.insert('', 'end', key, text=key)
+            tree.set(key, 'First Name', "Loading...")
+            tree.set(key, 'Last Name', "Loading...")
+            tree.set(key, 'Date of Birth', "Loading...")
+            tree.set(key, 'Start Date', "Loading...")
+            tree.set(key, 'No. of Medications', "Loading...")
+            tree.set(key, 'Condition', "Loading...")
+
+    def delete_loading_message(self):
+        self.get_production_thread.join()
+        logging.info("Production data re-population finished.")
+        for trees_results_and_dicts in self.parent.list_of_trees:
+            tree: Treeview = trees_results_and_dicts[0]
+            key = "loading"
+            tree.delete(key)
+        return
+
+    def threaded_update(self):
+        self.delete_loading_message_thread.join()
+        logging.info("Loading message removed from tree.")
+        self.parent.update()
+        self.destroy()
 
 
 class ViewPillpackProductionFolder(Frame):
@@ -883,13 +934,17 @@ class PatientMedicationDetails(Frame):
 
         patient_name_label = Label(self.display_frame, font=self.font,
                                    text=self.patient_tree_key + " (Start Date: " +
-                                        str(self.patient_object.start_date) + ")")
+                                   str(self.patient_object.start_date) + ")")
         patient_name_label.grid(row=0, column=0)
         manually_checked_toggle_label = Label(self.display_frame, font=self.font,
                                               text="Scripts Checked Manually", wraplength=300)
         self.changes_toggle_button = Button(self.display_frame, command=self._on_manually_checked_button_click)
+        generate_kardex_button = Button(self.display_frame, text="Generate Kardex")
+        generate_prns_button = Button(self.display_frame, text="Generate PRN list")
         manually_checked_toggle_label.grid(row=1, column=1)
         self.changes_toggle_button.grid(row=1, column=2)
+        generate_kardex_button.grid(row=2, column=1)
+        generate_prns_button.grid(row=3, column=1)
 
         self.production_medication_frame = LabelFrame(self.display_frame)
         self.production_medication_frame.columnconfigure(0, weight=1)
@@ -1634,9 +1689,10 @@ def match_patient_to_pillpack_patient(patient_to_be_matched: PillpackPatient, pi
     return matching_pillpack_patient
 
 
-def populate_pillpack_production_data(application: App):
+def populate_pillpack_production_data(application: App, earliest_start_date: datetime.date = None):
     application.collected_patients.set_pillpack_patient_dict(
-        get_patient_medicine_data(application.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG, application.config)
+        get_patient_medicine_data(application.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG,
+                                  application.config, earliest_start_date=earliest_start_date)
     )
     save_collected_patients(application.collected_patients)
 

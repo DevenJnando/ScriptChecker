@@ -21,7 +21,7 @@ class KardexDocTests(unittest.TestCase):
     def test_populate_kardex_table(self):
         DocxGeneration.generate_kardex_doc_file(self.mock_patient,
                                                 "Test Production",
-                                                "Test Kardex File.docx")
+                                                "C:\\Users\\Farmadosis\\Test Kardex File.docx")
         kardex = open("Test Kardex File.docx")
         self.assertIsNotNone(kardex)
         kardex.close()
