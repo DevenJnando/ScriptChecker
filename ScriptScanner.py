@@ -425,6 +425,19 @@ class HomeScreen(Frame):
         self.production_patients_tree = Treeview(self.production_patients_results,
                                                  columns=self.columns,
                                                  height=10)
+        self.production_right_click_menu = Menu(self.production_patients_tree, tearoff=0)
+        self.production_right_click_menu.add_command(label="View Patient",
+                                                     command=lambda: self.on_treeview_double_click(
+                                                         self.production_patients_tree)
+                                                     )
+        self.production_right_click_menu.add_command(label="Delete Patient",
+                                                     command=lambda: self.delete_patient_and_remove_from_tree(
+                                                         self.production_patients_tree)
+                                                     )
+        self.production_patients_tree.bind("<Button-3>", lambda e: popup_menu(e,
+                                                                              self.production_patients_tree,
+                                                                              self.production_right_click_menu)
+                                           )
         calibrate_width(self.production_patients_tree, self.columns, 125)
         self.production_patients_tree["displaycolumns"] = (
         'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
@@ -493,6 +506,19 @@ class HomeScreen(Frame):
         self.update()
         self.script_window = None
         self.populate_patients_window = None
+
+    def delete_patient_and_remove_from_tree(self, tree_to_delete_from: Treeview):
+        if isinstance(tree_to_delete_from, Treeview):
+            selected_patient = retrieve_patient_from_tree(tree_to_delete_from, self.master)
+            if isinstance(selected_patient, PillpackPatient):
+                self.master.collected_patients.remove_pillpack_patient(selected_patient)
+                self.master.collected_patients.remove_matched_patient(selected_patient)
+                self.master.collected_patients.remove_minor_mismatched_patient(selected_patient)
+                self.master.collected_patients.remove_severely_mismatched_patient(selected_patient)
+                self.master.collected_patients.remove_patient(selected_patient)
+                tree_to_delete_from.delete(tree_to_delete_from.focus())
+                save_collected_patients(self.master.collected_patients)
+                self.update()
 
     def _update_list_of_trees(self):
         self.list_of_trees[0] = ([self.production_patients_tree,
@@ -724,27 +750,15 @@ class HomeScreen(Frame):
     def on_treeview_double_click(self, tree_to_select_from: Treeview):
         if isinstance(tree_to_select_from, Treeview):
             try:
-                item = tree_to_select_from.focus()
-                column_values = tree_to_select_from.item(item).get("values")
-                first_name = column_values[0]
-                last_name = column_values[1]
-                patient_list = self.master.collected_patients.pillpack_patient_dict.get(last_name.lower())
-                if isinstance(patient_list, list):
-                    filtered_patients = (list
-                                         (filter
-                                          (lambda patient: patient.first_name.lower() == first_name.lower(),
-                                           patient_list)
-                                          )
-                                         )
-                    selected_patient = filtered_patients[0]
-                    if isinstance(selected_patient, PillpackPatient):
-                        self.master.show_frame(consts.VIEW_PATIENT_SCREEN, selected_patient)
-                        logging.info("Patient {0} {1} selected through user double click. Patient view for this "
-                                     "patient has been opened."
-                                     .format(selected_patient.first_name, selected_patient.last_name))
-                    else:
-                        logging.error("Object {0} in filtered patient list is not of type PillpackPatient."
-                                      .format(selected_patient))
+                selected_patient = retrieve_patient_from_tree(tree_to_select_from, self.master)
+                if isinstance(selected_patient, PillpackPatient):
+                    self.master.show_frame(consts.VIEW_PATIENT_SCREEN, selected_patient)
+                    logging.info("Patient {0} {1} selected through user double click. Patient view for this "
+                                 "patient has been opened."
+                                 .format(selected_patient.first_name, selected_patient.last_name))
+                else:
+                    logging.error("Object {0} in filtered patient list is not of type PillpackPatient."
+                                  .format(selected_patient))
             except IndexError as e:
                 logging.error("Thrown IndexError: {0}".format(e))
 
@@ -1703,6 +1717,35 @@ def archive_pillpack_production_dialog(home_screen: HomeScreen = None):
     archive_pillpack_production(archive_file, home_screen.master.config)
     if home_screen is not None:
         home_screen.threaded_production_data_retrieval()
+
+
+def popup_menu(event, tree_to_highlight: Treeview, menu: Menu):
+    try:
+        iid = tree_to_highlight.identify_row(event.y)
+        if iid:
+            tree_to_highlight.selection_set(iid)
+            tree_to_highlight.focus(tree_to_highlight.selection()[0])
+        menu.tk_popup(event.x_root, event.y_root, 0)
+    finally:
+        menu.grab_release()
+
+
+def retrieve_patient_from_tree(tree: Treeview, application: App):
+    item = tree.focus()
+    column_values = tree.item(item).get("values")
+    first_name = column_values[0]
+    last_name = column_values[1]
+    patient_list = application.collected_patients.pillpack_patient_dict.get(last_name.lower())
+    if isinstance(patient_list, list):
+        filtered_patients = (list
+                             (filter
+                              (lambda patient: patient.first_name.lower() == first_name.lower(),
+                               patient_list)
+                              )
+                             )
+        return filtered_patients[0]
+    else:
+        return None
 
 
 def set_pillpack_production_directory(application: App):
