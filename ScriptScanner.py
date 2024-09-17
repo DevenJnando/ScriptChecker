@@ -425,6 +425,8 @@ class HomeScreen(Frame):
         self.production_patients_tree = Treeview(self.production_patients_results,
                                                  columns=self.columns,
                                                  height=10)
+        # Add a menu for all other trees, also restructure this view/controller section of the application into
+        # separate classes.
         self.production_right_click_menu = Menu(self.production_patients_tree, tearoff=0)
         self.production_right_click_menu.add_command(label="View Patient",
                                                      command=lambda: self.on_treeview_double_click(
@@ -440,7 +442,8 @@ class HomeScreen(Frame):
                                            )
         calibrate_width(self.production_patients_tree, self.columns, 125)
         self.production_patients_tree["displaycolumns"] = (
-        'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+            'Date of Birth', 'Start Date', 'No. of Medications', 'Condition'
+        )
         self.detached_production_patient_nodes: list = []
         self.list_of_trees.append([self.production_patients_tree,
                                    self.production_patients_results,
@@ -455,9 +458,23 @@ class HomeScreen(Frame):
         self.perfect_patients_tree = Treeview(self.perfect_match_patients,
                                               columns=self.columns,
                                               height=10)
+        self.perfect_patients_right_click_menu = Menu(self.perfect_patients_tree, tearoff=0)
+        self.perfect_patients_right_click_menu.add_command(label="View Patient",
+                                                           command=lambda: self.on_treeview_double_click(
+                                                               self.perfect_patients_tree)
+                                                           )
+        self.perfect_patients_right_click_menu.add_command(label="Delete Patient",
+                                                           command=lambda: self.delete_patient_and_remove_from_tree(
+                                                               self.perfect_patients_tree)
+                                                           )
+        self.perfect_patients_tree.bind("<Button-3>", lambda e: popup_menu(e,
+                                                                           self.perfect_patients_tree,
+                                                                           self.perfect_patients_right_click_menu)
+                                        )
         calibrate_width(self.perfect_patients_tree, self.columns, 125)
         self.perfect_patients_tree["displaycolumns"] = (
-        'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+            'Date of Birth', 'Start Date', 'No. of Medications', 'Condition'
+        )
         self.detached_perfect_patient_nodes: list = []
         self.list_of_trees.append([self.perfect_patients_tree,
                                    self.perfect_match_patients,
@@ -472,9 +489,23 @@ class HomeScreen(Frame):
         self.imperfect_patients_tree = Treeview(self.minor_mismatch_patients,
                                                 columns=self.columns,
                                                 height=10)
+        self.imperfect_patients_right_click_menu = Menu(self.imperfect_patients_tree, tearoff=0)
+        self.imperfect_patients_right_click_menu.add_command(label="View Patient",
+                                                             command=lambda: self.on_treeview_double_click(
+                                                                 self.imperfect_patients_tree)
+                                                             )
+        self.imperfect_patients_right_click_menu.add_command(label="Delete Patient",
+                                                             command=lambda: self.delete_patient_and_remove_from_tree(
+                                                                 self.imperfect_patients_tree)
+                                                             )
+        self.imperfect_patients_tree.bind("<Button-3>", lambda e: popup_menu(e,
+                                                                             self.imperfect_patients_tree,
+                                                                             self.imperfect_patients_right_click_menu)
+                                          )
         calibrate_width(self.imperfect_patients_tree, self.columns, 125)
         self.imperfect_patients_tree["displaycolumns"] = (
-        'Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+            'Date of Birth', 'Start Date', 'No. of Medications', 'Condition'
+        )
         self.detached_imperfect_patient_nodes: list = []
         self.list_of_trees.append([self.imperfect_patients_tree,
                                    self.minor_mismatch_patients,
@@ -489,9 +520,23 @@ class HomeScreen(Frame):
         self.mismatched_patients_tree = Treeview(self.severe_mismatch_patients,
                                                  columns=self.columns,
                                                  height=10)
+        self.mismatched_right_click_menu = Menu(self.mismatched_patients_tree, tearoff=0)
+        self.mismatched_right_click_menu.add_command(label="View Patient",
+                                                     command=lambda: self.on_treeview_double_click(
+                                                         self.mismatched_patients_tree)
+                                                     )
+        self.mismatched_right_click_menu.add_command(label="Delete Patient",
+                                                     command=lambda: self.delete_patient_and_remove_from_tree(
+                                                         self.mismatched_patients_tree)
+                                                     )
+        self.mismatched_patients_tree.bind("<Button-3>", lambda e: popup_menu(e,
+                                                                              self.mismatched_patients_tree,
+                                                                              self.mismatched_right_click_menu)
+                                           )
         calibrate_width(self.mismatched_patients_tree, self.columns, 125)
-        self.mismatched_patients_tree["displaycolumns"] = \
-            ('Date of Birth', 'Start Date', 'No. of Medications', 'Condition')
+        self.mismatched_patients_tree["displaycolumns"] = (
+            'Date of Birth', 'Start Date', 'No. of Medications', 'Condition'
+        )
         self.detatched_mismatched_patient_nodes = []
         self.list_of_trees.append([self.mismatched_patients_tree,
                                    self.severe_mismatch_patients,
@@ -1733,17 +1778,20 @@ def popup_menu(event, tree_to_highlight: Treeview, menu: Menu):
 def retrieve_patient_from_tree(tree: Treeview, application: App):
     item = tree.focus()
     column_values = tree.item(item).get("values")
-    first_name = column_values[0]
-    last_name = column_values[1]
-    patient_list = application.collected_patients.pillpack_patient_dict.get(last_name.lower())
-    if isinstance(patient_list, list):
-        filtered_patients = (list
-                             (filter
-                              (lambda patient: patient.first_name.lower() == first_name.lower(),
-                               patient_list)
-                              )
-                             )
-        return filtered_patients[0]
+    if len(column_values) > 0:
+        first_name = column_values[0]
+        last_name = column_values[1]
+        patient_list = application.collected_patients.pillpack_patient_dict.get(last_name.lower())
+        if isinstance(patient_list, list):
+            filtered_patients = (list
+                                 (filter
+                                  (lambda patient: patient.first_name.lower() == first_name.lower(),
+                                   patient_list)
+                                  )
+                                 )
+            return filtered_patients[0]
+        else:
+            return None
     else:
         return None
 
