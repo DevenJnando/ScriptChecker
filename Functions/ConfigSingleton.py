@@ -9,7 +9,6 @@ consts = types.SimpleNamespace()
 consts.PERFECT_MATCH = "PERFECT_MATCH"
 consts.IMPERFECT_MATCH = "IMPERFECT_MATCH"
 consts.NO_MATCH = "NO_MATCH"
-consts.PROTOCOL = pickle.HIGHEST_PROTOCOL
 consts.UNSET_LOCATION = "Location not set"
 consts.HOME_SCREEN = "HomeScreen"
 consts.VIEW_PATIENT_SCREEN = "ViewPatientScreen"
@@ -54,6 +53,7 @@ if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
 else:
     application_path = os.path.dirname(os.path.abspath(os.path.join(os.path.dirname(__file__))))
+consts.APP_PATH = application_path
 
 
 def load_settings():

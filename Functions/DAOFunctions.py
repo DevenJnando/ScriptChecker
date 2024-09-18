@@ -28,16 +28,18 @@ def scan_pillpack_folder(filepath: str):
     return list(filter(lambda entity: entity.is_file() and entity.name.split(".")[1] == "ppc_processed", entities))
 
 
-def archive_pillpack_production(archive_file, config):
+def archive_pillpack_production(archive_file, config, collected_patients: CollectedPatients):
     if config is not None:
+        archive_file_name = "archived_production_{0}.pk1".format(datetime.today().date())
         ppc_processed_files = scan_pillpack_folder(config["pillpackDataLocation"])
         pillpack_directory = config["pillpackDataLocation"] + "\\"
         with ZipFile(archive_file.name, 'w') as archived_production_data:
             for file in ppc_processed_files:
-                archived_production_data.write(pillpack_directory + file.name)
-                logging.info("Wrote file {0} to this production's archive".format(file.name))
                 os.remove(pillpack_directory + file.name)
                 logging.info("Removed file {0} from the pillpack directory {1}".format(file.name, pillpack_directory))
+            save_to_file(collected_patients, archive_file_name)
+            archived_production_data.write(archive_file_name)
+            os.remove(archive_file_name)
             os.remove(consts.COLLECTED_PATIENTS_FILE)
             logging.info("Removed the pickle file of this production")
 
@@ -102,5 +104,5 @@ def retrieve_prns_and_linked_medications(patient: PillpackPatient, prns_and_link
 
 def save_to_file(object_to_save, filename):
     with open(filename, 'wb') as output:
-        pickle.dump(object_to_save, output, consts.PROTOCOL)
+        pickle.dump(object_to_save, output, pickle.HIGHEST_PROTOCOL)
         logging.info("Saved object {0} to pickle file {1} successfully.".format(object_to_save, filename))

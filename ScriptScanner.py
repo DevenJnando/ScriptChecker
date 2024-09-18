@@ -732,6 +732,11 @@ class HomeScreen(Frame):
         else:
             self._refresh_treeview(tree_to_filter, dictionary_to_reference)
 
+    def clear_all_trees(self):
+        for i in range(len(self.list_of_trees)):
+            tree: Treeview = self.list_of_trees[i][0]
+            tree.delete(*tree.get_children())
+
     def update(self):
         logging.info("HomeScreen update function called.")
         self._update_list_of_trees()
@@ -743,7 +748,6 @@ class HomeScreen(Frame):
             associated_dict: dict = self.list_of_trees[i][2]
             self._refresh_treeview(tree, associated_dict)
             self._on_filter_selected(self.list_of_trees[i][4], tree, associated_dict, i)
-        print(self.group_production_name_var.get(), " ", self.master.collected_patients.production_group_name)
         logging.info("HomeScreen update function call complete")
 
     def open_scan_scripts_window(self):
@@ -1770,11 +1774,14 @@ def populate_pillpack_production_data(application: App, earliest_start_date: dat
 
 
 def archive_pillpack_production_dialog(home_screen: HomeScreen = None):
-    archive_file = filedialog.asksaveasfile(initialfile="Untitled.zip", defaultextension=".zip",
-                                            filetypes=[("All files", ".*"), ("ZIP files", ".zip")])
-    archive_pillpack_production(archive_file, home_screen.master.config)
-    if home_screen is not None:
-        home_screen.threaded_production_data_retrieval()
+    archive_file = filedialog.asksaveasfile(initialfile="Untitled", defaultextension=".zip",
+                                            filetypes=[("ZIP files", ".zip"), ("All files", ".*")])
+    if archive_file:
+        archive_pillpack_production(archive_file, home_screen.master.config, home_screen.master.collected_patients)
+        if home_screen is not None:
+            home_screen.master.collected_patients = CollectedPatients()
+            home_screen.clear_all_trees()
+            home_screen.update()
 
 
 def popup_menu(event, tree_to_highlight: Treeview, menu: Menu):
