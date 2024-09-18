@@ -43,7 +43,8 @@ try:
     from watchdog.observers import Observer as WatchdogObserver
     from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileCreatedEvent, FileMovedEvent
 
-    from Models import PillpackPatient, Medication, CollectedPatients
+    from Models import PillpackPatient, Medication
+    from Repositories import CollectedPatients
 except:
     logger.exception(ImportError("Failed to import one or more libraries..."))
     exit(1)
@@ -147,10 +148,10 @@ class App(tkinter.Tk):
         self.style = tkinter.ttk.Style(self)
         self.tk.call("source", themes_dir + "\\" + "forest-dark.tcl")
         self.style.theme_use("forest-dark")
-        self.geometry("1080x720")
+        self.geometry("1280x820")
         self.title("Pillpack Script Checker")
         self.minsize(1080, 720)
-        self.maxsize(1080, 720)
+        self.maxsize(1280, 820)
         self.collected_patients = load_collected_patients_from_object()
         self.loaded_prns_and_linked_medications: dict = load_prns_and_linked_medications_from_object()
         self.app_observer: Observer = Observer()
@@ -400,6 +401,15 @@ class HomeScreen(Frame):
         archive_production_label.grid(row=1, column=2, sticky="nsew")
         archive_production_button.grid(row=2, column=2, sticky="nsew")
 
+        self.group_production_name_var = StringVar()
+        self.group_production_name_var.set(self.master.collected_patients.production_group_name)
+        production_font = font.Font(family="Arial", size=28, weight="bold")
+        production_font.config(underline=True)
+        self.group_production_name_label = Label(options_frame,
+                                                 textvariable=self.group_production_name_var,
+                                                 font=production_font)
+        self.group_production_name_label.grid(row=3, column=1)
+
         paned_window = tkinter.ttk.PanedWindow(container_frame)
         paned_window.grid(row=3, column=1, pady=(25, 5), sticky="nsew", rowspan=4)
 
@@ -440,7 +450,7 @@ class HomeScreen(Frame):
                                                                               self.production_patients_tree,
                                                                               self.production_right_click_menu)
                                            )
-        calibrate_width(self.production_patients_tree, self.columns, 125)
+        calibrate_width(self.production_patients_tree, self.columns, 150)
         self.production_patients_tree["displaycolumns"] = (
             'Date of Birth', 'Start Date', 'No. of Medications', 'Condition'
         )
@@ -471,7 +481,7 @@ class HomeScreen(Frame):
                                                                            self.perfect_patients_tree,
                                                                            self.perfect_patients_right_click_menu)
                                         )
-        calibrate_width(self.perfect_patients_tree, self.columns, 125)
+        calibrate_width(self.perfect_patients_tree, self.columns, 150)
         self.perfect_patients_tree["displaycolumns"] = (
             'Date of Birth', 'Start Date', 'No. of Medications', 'Condition'
         )
@@ -502,7 +512,7 @@ class HomeScreen(Frame):
                                                                              self.imperfect_patients_tree,
                                                                              self.imperfect_patients_right_click_menu)
                                           )
-        calibrate_width(self.imperfect_patients_tree, self.columns, 125)
+        calibrate_width(self.imperfect_patients_tree, self.columns, 150)
         self.imperfect_patients_tree["displaycolumns"] = (
             'Date of Birth', 'Start Date', 'No. of Medications', 'Condition'
         )
@@ -533,7 +543,7 @@ class HomeScreen(Frame):
                                                                               self.mismatched_patients_tree,
                                                                               self.mismatched_right_click_menu)
                                            )
-        calibrate_width(self.mismatched_patients_tree, self.columns, 125)
+        calibrate_width(self.mismatched_patients_tree, self.columns, 150)
         self.mismatched_patients_tree["displaycolumns"] = (
             'Date of Birth', 'Start Date', 'No. of Medications', 'Condition'
         )
@@ -727,11 +737,13 @@ class HomeScreen(Frame):
         self._update_list_of_trees()
         self._refresh_patient_status()
         self.set_tree_widgets()
+        self.group_production_name_var.set(self.master.collected_patients.production_group_name)
         for i in range(len(self.list_of_trees)):
             tree: Treeview = self.list_of_trees[i][0]
             associated_dict: dict = self.list_of_trees[i][2]
             self._refresh_treeview(tree, associated_dict)
             self._on_filter_selected(self.list_of_trees[i][4], tree, associated_dict, i)
+        print(self.group_production_name_var.get(), " ", self.master.collected_patients.production_group_name)
         logging.info("HomeScreen update function call complete")
 
     def open_scan_scripts_window(self):
@@ -863,6 +875,7 @@ class PopulatePatientData(Toplevel):
         self.loading_message_thread.join()
         logging.info("Loading message thread finished.")
         self.master.collected_patients = CollectedPatients()
+        self.master.collected_patients.production_group_name = self.production_group_input.get()
         populate_pillpack_production_data(self.master, earliest_start_date=earilest_start_date)
         return
 

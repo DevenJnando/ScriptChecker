@@ -19,6 +19,7 @@ file_handler.setFormatter(formatter)
 class CollectedPatients:
     def __init__(self):
         self.ready_to_produce_code = 0
+        self.production_group_name = ""
         self.pillpack_patient_dict = {}
         self.all_patients = {}
         self.matched_patients = {}
