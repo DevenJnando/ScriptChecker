@@ -1,7 +1,6 @@
 import datetime
 import logging
 import re
-import sys
 
 from Models import PillpackPatient, Medication
 from Repositories import CollectedPatients
@@ -9,18 +8,6 @@ from Functions.ConfigSingleton import consts
 from Functions.XML import scan_script
 from Functions.ModelBuilder import create_patient_object_from_script
 from Functions.DAOFunctions import save_collected_patients
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
-
-stdout_handler = logging.StreamHandler(sys.stdout)
-stdout_handler.setLevel(logging.DEBUG)
-stdout_handler.setFormatter(formatter)
-
-file_handler = logging.FileHandler('logs.log')
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(formatter)
 
 
 def compare_patient_details(pillpack_patient: PillpackPatient, script_patient: PillpackPatient):

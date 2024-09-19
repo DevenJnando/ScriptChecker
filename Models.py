@@ -1,20 +1,6 @@
 import datetime
 import types
-
-import sys
 import logging
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
-
-stdout_handler = logging.StreamHandler(sys.stdout)
-stdout_handler.setLevel(logging.DEBUG)
-stdout_handler.setFormatter(formatter)
-
-file_handler = logging.FileHandler('logs.log')
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(formatter)
 
 consts = types.SimpleNamespace()
 consts.READY_TO_PRODUCE_CODE = 1
@@ -24,8 +10,8 @@ consts.DO_NOT_PRODUCE = 4
 consts.MANUALLY_CHECKED = 5
 consts.PRN_KEY = "prns_dict"
 consts.LINKED_MEDS_KEY = "linked_meds_dict"
-consts.COLLECTED_PATIENTS_FILE = 'Patients.pk1'
-consts.PRNS_AND_LINKED_MEDICATIONS_FILE = 'PrnsAndLinkedMeds.pk1'
+consts.COLLECTED_PATIENTS_FILE = 'App/Patients.pk1'
+consts.PRNS_AND_LINKED_MEDICATIONS_FILE = 'App/PrnsAndLinkedMeds.pk1'
 
 
 class Medication:
