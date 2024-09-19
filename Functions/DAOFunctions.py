@@ -57,6 +57,23 @@ def load_object(object_file_name: str):
         return o
 
 
+def load_collected_patients_from_zip_file(archived_production: ZipFile):
+    o = None
+    try:
+        for info in archived_production.infolist():
+            if info.filename.endswith('.pk1'):
+                with archived_production.open(info.filename) as binary_file:
+                    o = pickle.loads(binary_file.read())
+                    logging.info("Loaded file {0} from archive {1} into memory".format(binary_file.name,
+                                                                                       archived_production.filename))
+                    break
+    except Exception as e:
+        o = None
+        logging.error("{0} \nCould not load file from archive {1} into memory".format(e, archived_production.filename))
+    finally:
+        return o
+
+
 def load_collected_patients_from_object():
     collected_patients: CollectedPatients = load_object(consts.COLLECTED_PATIENTS_FILE)
     if collected_patients is None:
