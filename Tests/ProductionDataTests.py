@@ -1,7 +1,7 @@
 import datetime
 from functools import reduce
 from xml.dom import minidom
-from Functions.XML import parse_xml, sanitise_and_encode_text_from_file
+from Functions.XML import parse_xml_ppc, sanitise_and_encode_text_from_file
 from Functions.DAOFunctions import scan_pillpack_folder
 from Functions.ModelBuilder import create_patient_object_from_pillpack_data
 
@@ -32,8 +32,8 @@ class ProductionDataXMLTests(unittest.TestCase):
 
     def test_parse_xml(self):
         xml_data: list = reduce(list.__add__,
-                                parse_xml(sanitise_and_encode_text_from_file(consts.BAD_XML_PPC,
-                                                                             consts.PPC_SEPARATING_TAG, self.config)))
+                                parse_xml_ppc(sanitise_and_encode_text_from_file(consts.BAD_XML_PPC,
+                                                                                 consts.PPC_SEPARATING_TAG, self.config)))
         self.assertEqual(3, len(xml_data))
         for i in range(len(xml_data)):
             if isinstance(xml_data[i], minidom.Element):
@@ -56,7 +56,7 @@ class ProductionDataXMLTests(unittest.TestCase):
                 self.fail("XML parsing has failed: outer tags cannot be interpreted")
 
     def test_create_patient_from_xml(self):
-        list_of_orders: list = reduce(list.__add__, parse_xml(
+        list_of_orders: list = reduce(list.__add__, parse_xml_ppc(
             sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
                                                consts.PPC_SEPARATING_TAG, self.config)
         ))
@@ -73,7 +73,7 @@ class ProductionDataXMLTests(unittest.TestCase):
                                   type(patient_object)))
 
     def test_create_medications_for_patient_from_xml(self):
-        list_of_orders: list = reduce(list.__add__, parse_xml(
+        list_of_orders: list = reduce(list.__add__, parse_xml_ppc(
             sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
                                                consts.PPC_SEPARATING_TAG, self.config)
         ))

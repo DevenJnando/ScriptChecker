@@ -16,6 +16,7 @@ class ViewPillpackProductionFolder(Frame):
         self.descriptor_font = font.Font(family='Verdana', size=20, weight="bold")
         self.folder_location_font = font.Font(family='Verdana', size=14, weight="normal")
         self.folder_location = self.master.config["pillpackDataLocation"]
+        self.handler = None
         side_bar = SideBar(self, self.master)
         side_bar.pack(side="left", fill="both")
         container_frame = tkinter.ttk.Frame(self)
@@ -41,10 +42,10 @@ class ViewPillpackProductionFolder(Frame):
         logging.info("ViewPillpackProductionFolder update function called.")
         self.folder_location = self.master.config["pillpackDataLocation"]
         self.folder_location_string_var.set(self.folder_location)
-        handler = WatchdogEventHandler(self.master)
+        self.handler = WatchdogEventHandler(self.master)
         self.master.filesystem_observer.unschedule(self.master.current_directory_to_watch)
         self.master.current_directory_to_watch = (
-            self.master.filesystem_observer.schedule(handler, self.master.config["pillpackDataLocation"],
+            self.master.filesystem_observer.schedule(self.handler, self.master.config["pillpackDataLocation"],
                                                      recursive=False))
         logging.info("File system observer started in directory {0} successfully."
                      .format(self.master.config["pillpackDataLocation"]))

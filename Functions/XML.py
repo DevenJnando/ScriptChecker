@@ -12,7 +12,7 @@ def remove_whitespace(node):
         remove_whitespace(child)
 
 
-def parse_xml(list_of_orders_raw_text: list):
+def parse_xml_ppc(list_of_orders_raw_text: list):
     order_information: list = []
     if list_of_orders_raw_text is not None:
         for order_raw_text in list_of_orders_raw_text:
@@ -26,6 +26,21 @@ def parse_xml(list_of_orders_raw_text: list):
                 logging.error("Could not parse order from XML file: {0}".format(e))
             except TypeError as e:
                 logging.error("Could not parse order from XML file: {0}".format(e))
+    return order_information
+
+
+def parse_xml_fd(xml_raw_text):
+    order_information: list = []
+    try:
+        document = minidom.parseString(xml_raw_text)
+        remove_whitespace(document)
+        document.normalize()
+        order_information.append(document.getElementsByTagName("OrderInfo"))
+        logging.info("Parsed order from XML file")
+    except xml.parsers.expat.ExpatError as e:
+        logging.error("Could not parse order from XML file: {0}".format(e))
+    except TypeError as e:
+        logging.error("Could not parse order from XML file: {0}".format(e))
     return order_information
 
 

@@ -1,7 +1,7 @@
 import unittest
 from functools import reduce
 from TestConsts import consts, populate_test_settings, load_test_settings
-from Functions.XML import parse_xml, sanitise_and_encode_text_from_file
+from Functions.XML import parse_xml_ppc, sanitise_and_encode_text_from_file
 from Functions.ModelBuilder import (create_patient_object_from_pillpack_data,
                                     get_medication_take_times,
                                     get_specified_medication_take_times)
@@ -38,7 +38,7 @@ class PatientAndMedicationTests(unittest.TestCase):
                 }
             }
         }
-        cls.list_of_orders: list = reduce(list.__add__, parse_xml(
+        cls.list_of_orders: list = reduce(list.__add__, parse_xml_ppc(
             sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
                                                consts.PPC_SEPARATING_TAG, load_test_settings())
         ))

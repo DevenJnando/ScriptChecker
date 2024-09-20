@@ -9,7 +9,7 @@ from tkcalendar import Calendar
 import App
 from Functions.ConfigSingleton import consts
 from Functions.DAOFunctions import save_collected_patients
-from Functions.ModelFactory import get_patient_medicine_data
+from Functions.ModelFactory import get_patient_medicine_data_ppc
 from Repositories import CollectedPatients
 
 
@@ -70,8 +70,8 @@ class PopulatePatientData(Toplevel):
         self.master.collected_patients = CollectedPatients()
         self.master.collected_patients.production_group_name = self.production_group_input.get()
         self.master.collected_patients.set_pillpack_patient_dict(
-            get_patient_medicine_data(self.master.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG,
-                                      self.master.config, earliest_start_date=earliest_start_date)
+            get_patient_medicine_data_ppc(self.master.loaded_prns_and_linked_medications, consts.PPC_SEPARATING_TAG,
+                                          self.master.config, earliest_start_date=earliest_start_date)
         )
         save_collected_patients(self.master.collected_patients)
         return

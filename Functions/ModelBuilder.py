@@ -22,7 +22,17 @@ def get_medication_take_times(time_of_day: str, no_of_meds_to_take: float, medic
                 if no_of_meds_to_take % 1 == 0:
                     no_of_meds_to_take = int(no_of_meds_to_take)
                 medication.morning_dosage = no_of_meds_to_take
+        case "Morning":
+            if no_of_meds_to_take != 0.0:
+                if no_of_meds_to_take % 1 == 0:
+                    no_of_meds_to_take = int(no_of_meds_to_take)
+                medication.morning_dosage = no_of_meds_to_take
         case "AFTERNOON":
+            if no_of_meds_to_take != 0.0:
+                if no_of_meds_to_take % 1 == 0:
+                    no_of_meds_to_take = int(no_of_meds_to_take)
+                medication.afternoon_dosage = no_of_meds_to_take
+        case "Midday":
             if no_of_meds_to_take != 0.0:
                 if no_of_meds_to_take % 1 == 0:
                     no_of_meds_to_take = int(no_of_meds_to_take)
@@ -33,6 +43,11 @@ def get_medication_take_times(time_of_day: str, no_of_meds_to_take: float, medic
                     no_of_meds_to_take = int(no_of_meds_to_take)
                 medication.evening_dosage = no_of_meds_to_take
         case "NIGHT":
+            if no_of_meds_to_take != 0.0:
+                if no_of_meds_to_take % 1 == 0:
+                    no_of_meds_to_take = int(no_of_meds_to_take)
+                medication.night_dosage = no_of_meds_to_take
+        case "Bedtime":
             if no_of_meds_to_take != 0.0:
                 if no_of_meds_to_take % 1 == 0:
                     no_of_meds_to_take = int(no_of_meds_to_take)

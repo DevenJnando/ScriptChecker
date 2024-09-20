@@ -1,15 +1,17 @@
 import os
+import shutil
 import tkinter
 import logging
 import sys
 import typing
+from zipfile import ZipFile
 
 try:
     from multiprocessing import Queue
     from tkinter import font, filedialog
     from tkinter.ttk import Treeview
-    from Functions.ModelFactory import get_patient_data_from_specific_file
-    from Models import PillpackPatient
+    from Functions.ModelFactory import get_patient_data_from_specific_file, get_patient_medicine_data_xml
+    from Models import PillpackPatient, Medication
     from Repositories import CollectedPatients
     from AppObserver import Observer
     import HomeScreen
@@ -83,9 +85,9 @@ class App(tkinter.Tk):
             self.show_frame(consts.VIEW_PILLPACK_FOLDER_LOCATION)
         else:
             self.show_frame(consts.HOME_SCREEN)
-            handler = WatchdogEventHandler(self)
+            self.handler = WatchdogEventHandler(self)
             self.current_directory_to_watch = (
-                self.filesystem_observer.schedule(handler, self.config["pillpackDataLocation"], recursive=False))
+                self.filesystem_observer.schedule(self.handler, self.config["pillpackDataLocation"], recursive=False))
             self.filesystem_observer.start()
             logging.info("File system observer started in directory {0} successfully."
                          .format(self.config["pillpackDataLocation"]))
@@ -173,42 +175,18 @@ class App(tkinter.Tk):
         file_extension = full_path.rsplit('.')[1]
         if file_extension == "ppc_processed":
             logging.info("The modified file has a ppc_processed file extension. Executing patient(s) update...")
-            list_of_patients = (get_patient_data_from_specific_file
-                                (self.loaded_prns_and_linked_medications, file_name,
-                                 "OrderInfo",
-                                 self.master.config))
-            for patient in list_of_patients:
-                if isinstance(patient, PillpackPatient):
-                    patient_exists: bool = self.collected_patients.update_pillpack_patient_dict(patient)
-                    if not patient_exists:
-                        logging.info("Patient {0} {1} does not exist in current production. "
-                                     "Adding to production list...".format(patient.first_name, patient.last_name))
-                        if self.collected_patients.pillpack_patient_dict.__contains__(patient.last_name.lower()):
-                            logging.info("Patients with last name {0} already exists in dictionary. "
-                                         "Adding new patient to this list.".format(patient.last_name))
-                            list_of_patients: list = (self.collected_patients
-                                                      .pillpack_patient_dict.get(patient.last_name.lower()))
-                            list_of_patients.append(patient)
-                            list_of_patients = list(dict.fromkeys(list_of_patients))
-                            self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
-                            logging.info("Added new patient {0} {1} to the production list."
-                                         .format(patient.first_name, patient.last_name))
-                        else:
-                            logging.info("No patient with last name {0} exists in dictionary. "
-                                         "Creating new list of patients with this last name.".format(patient.last_name))
-                            list_of_patients: list = [patient]
-                            self.collected_patients.pillpack_patient_dict[patient.last_name.lower()] = list_of_patients
-                            logging.info("Added new patient {0} {1} to the production list."
-                                         .format(patient.first_name, patient.last_name))
-                    else:
-                        logging.info("Patient {0} {1} exists in current production. Removing old script data..."
-                                     .format(patient.first_name, patient.last_name))
-                        self.collected_patients.remove_patient(patient)
-                        self.collected_patients.remove_matched_patient(patient)
-                        self.collected_patients.remove_minor_mismatched_patient(patient)
-                        self.collected_patients.remove_severely_mismatched_patient(patient)
-                else:
-                    logging.warning("Object {0} is not of type PillpackPatient".format(patient))
+            self.handler.extract_patient_data_from_ppc_xml(file_name)
+            save_collected_patients(self.collected_patients)
+            self.app_observer.update_all()
+        elif file_extension == "fd":
+            copied_zip_file_name = self.config["pillpackDataLocation"] + "\\farma_copy.zip"
+            shutil.copyfile(watchdog_event.dest_path, copied_zip_file_name)
+            with ZipFile(copied_zip_file_name, 'r') as farmadosis_zip:
+                for info in farmadosis_zip.infolist():
+                    if info.filename.endswith('.xml'):
+                        with farmadosis_zip.open(info.filename) as binary_file:
+                            self.handler.extract_patient_data_from_fd_xml(binary_file)
+            os.remove(copied_zip_file_name)
             save_collected_patients(self.collected_patients)
             self.app_observer.update_all()
 
