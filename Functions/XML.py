@@ -2,6 +2,7 @@ import logging
 import re
 import xml
 from xml.dom import minidom
+from html import unescape
 
 
 def remove_whitespace(node):
@@ -100,6 +101,7 @@ def sanitise_and_encode_text_from_file(filename: str, separating_tag: str, confi
 def scan_script(raw_xml_text: str):
     try:
         sanitised_xml_text = ""
+        print(raw_xml_text)
         for character in raw_xml_text:
             match character:
                 case '"':
@@ -110,8 +112,12 @@ def scan_script(raw_xml_text: str):
                     character = '#'
                 case '#':
                     character = '£'
+                case '¬':
+                    character = '~'
             sanitised_xml_text += character
+        sanitised_xml_text = unescape(sanitised_xml_text)
         sanitised_xml_text = sanitised_xml_text.encode("iso-8859-1")
+        print(sanitised_xml_text)
         document = minidom.parseString(sanitised_xml_text)
         logging.info("Successfully scanned and encoded XML from script.")
         return document

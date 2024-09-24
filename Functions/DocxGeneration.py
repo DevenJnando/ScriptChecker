@@ -241,3 +241,4 @@ def generate_kardex_doc_file(patient: PillpackPatient, production_group_name: st
 
 def save_doc_file(doc: Document, file_name: str):
     doc.save(file_name)
+    logging.info("Saved Generated Kardex Docx File {0}".format(file_name))
