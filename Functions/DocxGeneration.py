@@ -204,6 +204,7 @@ def generate_prn_list_doc_file(patient: PillpackPatient, production_group_name: 
     _add_column_heading(header_cells[1], "Dosage", is_bold=True)
     _add_column_heading(header_cells[2], "Dispensed?", is_bold=True)
     for medication in patient.prns_for_current_cycle:
+        print(medication.medication_name, " ", medication.dosage)
         if isinstance(medication, Medication):
             row_cells = prn_table.add_row().cells
             _set_cell(row_cells[0], medication.medication_name, font_size=10,
