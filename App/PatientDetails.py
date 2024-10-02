@@ -61,15 +61,15 @@ class PatientMedicationDetails(Frame):
                                               text="Scripts Checked Manually", wraplength=300)
         self.changes_toggle_button = Button(self.display_frame, command=self._on_manually_checked_button_click)
         self.generate_kardex_button = Button(self.display_frame, text="Generate Kardex",
-                                        command=lambda: generate_patient_kardex(
-                                            self.patient_object,
-                                            self.master.group_production_name
-                                        ))
+                                             command=lambda: generate_patient_kardex(
+                                                 self.patient_object,
+                                                 self.master.group_production_name
+                                             ))
         self.generate_prns_button = Button(self.display_frame, text="Generate PRN list",
-                                      command=lambda: generate_prn_list_for_current_cycle(
-                                          self.patient_object,
-                                          self.master.group_production_name
-                                      ))
+                                           command=lambda: generate_prn_list_for_current_cycle(
+                                               self.patient_object,
+                                               self.master.group_production_name
+                                           ))
         manually_checked_toggle_label.grid(row=1, column=1)
         self.changes_toggle_button.grid(row=1, column=2)
         self.generate_kardex_button.grid(row=2, column=1)

@@ -153,7 +153,7 @@ class PillpackPatient:
             if isinstance(med, Medication):
                 if med.__eq__(med_to_be_added):
                     dupe = True
-        if not dupe:
+        if not dupe and isinstance(med_to_be_added, Medication):
             self.prns_for_current_cycle.append(med_to_be_added)
 
     def remove_medication_from_prns_for_current_cycle(self, med_to_be_removed: Medication):

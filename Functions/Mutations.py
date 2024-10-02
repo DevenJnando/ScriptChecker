@@ -127,7 +127,8 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
         else:
             if not full_medication_dict.__contains__(medication):
                 if patient_from_production.prn_medications_dict.__contains__(medication):
-                    patient_from_production.add_medication_to_prns_for_current_cycle(medication)
+                    prn_medication: Medication = patient_from_production.prn_medications_dict[medication]
+                    patient_from_production.add_medication_to_prns_for_current_cycle(prn_medication)
                 linked_medication: Medication = check_for_linked_medications(script_medication_dict[medication],
                                                                              patient_from_production.linked_medications)
                 if linked_medication is not None:
