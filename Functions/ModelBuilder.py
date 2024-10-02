@@ -146,10 +146,11 @@ def create_medication_object_from_script(medicine_element: minidom.Element):
 def create_patient_object_from_script(script_xml):
     if isinstance(script_xml, minidom.Document) and script_xml.hasChildNodes():
         patient_details = script_xml.getElementsByTagName("pa")[0]
+        surgery_details = script_xml.getElementsByTagName("pb")[0]
         patient_last_name = patient_details.getAttribute("l")
         patient_first_name = patient_details.getAttribute("f")
         patient_dob = datetime.date.fromisoformat(patient_details.getAttribute("b"))
-        surgery = patient_details.getAttribute("n")
+        surgery = surgery_details.getAttribute("n")
         medicines_on_script = script_xml.getElementsByTagName("dd")
         patient_object = PillpackPatient(patient_first_name, patient_last_name, patient_dob, surgery)
         logging.info("Extracted Patient information ({0} {1} {2}) from script's XML"

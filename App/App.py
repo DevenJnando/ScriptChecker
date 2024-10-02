@@ -73,6 +73,7 @@ class App(tkinter.Tk):
         self.title("Pillpack Script Checker")
         self.minsize(1080, 720)
         self.maxsize(1280, 820)
+        self.group_production_name = ""
         self.collected_patients = load_collected_patients_from_object()
         self.loaded_prns_and_linked_medications: dict = load_prns_and_linked_medications_from_object()
         self.app_observer: Observer = Observer()

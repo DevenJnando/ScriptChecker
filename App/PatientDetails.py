@@ -6,6 +6,7 @@ from tkinter.constants import VERTICAL, Y
 
 from AppFunctions.CreateToolTip import create_tool_tip
 import LinkMedication
+from Functions.KardexAndPRNGeneration import generate_patient_kardex, generate_prn_list_for_current_cycle
 from UnlinkMedication import UnlinkMedication
 from Functions.ConfigSingleton import consts
 from Functions.DAOFunctions import save_collected_patients, update_current_prns_and_linked_medications
@@ -59,8 +60,18 @@ class PatientMedicationDetails(Frame):
         manually_checked_toggle_label = Label(self.display_frame, font=self.font,
                                               text="Scripts Checked Manually", wraplength=300)
         self.changes_toggle_button = Button(self.display_frame, command=self._on_manually_checked_button_click)
-        generate_kardex_button = Button(self.display_frame, text="Generate Kardex")
-        generate_prns_button = Button(self.display_frame, text="Generate PRN list")
+        generate_kardex_button = Button(self.display_frame, text="Generate Kardex",
+                                        command=lambda: generate_patient_kardex(
+                                            self.patient_object,
+                                            self.master.group_production_name
+                                        ))
+        generate_prns_button = Button(self.display_frame, text="Generate PRN list",
+                                      command=lambda: generate_prn_list_for_current_cycle(
+                                          self.patient_object,
+                                          self.master.group_production_name
+                                      ))
+        if len(self.patient_object.prns_for_current_cycle) == 0:
+            generate_prns_button.configure(state="disabled")
         manually_checked_toggle_label.grid(row=1, column=1)
         self.changes_toggle_button.grid(row=1, column=2)
         generate_kardex_button.grid(row=2, column=1)
@@ -304,6 +315,7 @@ class PatientMedicationDetails(Frame):
     def set_medication_as_prn(self, selected_medication: Medication, medication_dict: dict):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
+        self.patient_object.add_medication_to_prns_for_current_cycle(selected_medication)
         self.patient_object.add_medication_to_prn_dict(selected_medication)
         save_collected_patients(self.master.collected_patients)
         update_current_prns_and_linked_medications(self.patient_object,
@@ -313,6 +325,7 @@ class PatientMedicationDetails(Frame):
 
     def remove_prn_medication(self, selected_medication: Medication):
         if self.patient_object.prn_medications_dict.__contains__(selected_medication.medication_name):
+            self.patient_object.remove_medication_from_prns_for_current_cycle(selected_medication)
             self.patient_object.remove_medication_from_prn_dict(selected_medication)
             if self.patient_object.production_medications_dict.__contains__(selected_medication.medication_name):
                 self.patient_object.add_medication_to_missing_dict(selected_medication)

@@ -173,8 +173,44 @@ def _add_alternating_column_headings(header_cells: list, bottom_range: int, top_
                 header_cells[i + 1].paragraphs[0].alignment = alignment
 
 
+def create_prn_list_doc_file():
+    return _create_doc_file_custom_page_format(True, 0.25, 0.25, 0.25, 0.25)
+
+
 def create_kardex_doc_file():
     return _create_doc_file_custom_page_format(False, 0.25, 0.25, 0.25, 0.25)
+
+
+def generate_prn_list_doc_file(patient: PillpackPatient, production_group_name: str, doc_name: str):
+    prn_doc: Document = create_prn_list_doc_file()
+    prn_doc.add_heading("PRNs This Cycle", 0)
+    container_table = _create_container_table(prn_doc, 1, 3)
+    container_table_cells = container_table.rows[0].cells
+    _create_single_column_table(prn_doc, container_table_cells[0], "Patient Details:",
+                                ["Name: {0} {1}".format(patient.first_name, patient.last_name),
+                                 "Date of Birth: {0}".format(patient.date_of_birth)], 2.25)
+    _create_single_column_table(prn_doc, container_table_cells[1],
+                                "Production Group: {0}".format(production_group_name),
+                                ["Surgery: {0}".format(patient.surgery)], 2.25)
+    _create_single_column_table(prn_doc, container_table_cells[2], "Important Info/Special Instructions:",
+                                ["", "PRN list generated on {0}".format(datetime.date.today())], 2.25,
+                                'Table Grid')
+    prn_table = _create_table(prn_doc, 1, 3, 'Table Grid')
+    prn_table.columns[0].width = Inches(3.1)
+    prn_table.columns[1].width = Inches(2.0)
+    prn_table.columns[2].width = Inches(1.5)
+    header_cells = prn_table.rows[0].cells
+    _add_column_heading(header_cells[0], "Drug name", is_bold=True)
+    _add_column_heading(header_cells[1], "Dosage", is_bold=True)
+    _add_column_heading(header_cells[2], "Dispensed?", is_bold=True)
+    for medication in patient.prns_for_current_cycle:
+        if isinstance(medication, Medication):
+            row_cells = prn_table.add_row().cells
+            _set_cell(row_cells[0], medication.medication_name, font_size=10,
+                      spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
+            _set_cell(row_cells[1], str(medication.dosage), font_size=10,
+                      spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
+    save_doc_file(prn_doc, doc_name)
 
 
 def generate_kardex_doc_file(patient: PillpackPatient, production_group_name: str, doc_name: str):

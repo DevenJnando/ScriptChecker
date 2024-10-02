@@ -88,6 +88,7 @@ class HomeScreen(Frame):
 
         self.group_production_name_var = StringVar()
         self.group_production_name_var.set(self.master.collected_patients.production_group_name)
+        self.master.group_production_name = self.group_production_name_var.get()
         production_font = font.Font(family="Arial", size=28, weight="bold")
         production_font.config(underline=True)
         self.group_production_name_label = Label(options_frame,
@@ -429,6 +430,7 @@ class HomeScreen(Frame):
         self._refresh_patient_status()
         self.set_tree_widgets()
         self.group_production_name_var.set(self.master.collected_patients.production_group_name)
+        self.master.group_production_name = self.group_production_name_var.get()
         for i in range(len(self.list_of_trees)):
             tree: Treeview = self.list_of_trees[i][0]
             associated_dict: dict = self.list_of_trees[i][2]

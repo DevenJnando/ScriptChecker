@@ -35,6 +35,13 @@ class Medication:
         else:
             return False
 
+    def __eq__(self, other):
+        return ((self.medication_name, self.dosage)
+                == (other.medication_name, other.dosage))
+
+    def __hash__(self):
+        return hash((self.medication_name, self.dosage))
+
 
 class PillpackPatient:
     def __init__(self, first_name, last_name, date_of_birth, surgery: str = None):
@@ -51,6 +58,7 @@ class PillpackPatient:
         self.unknown_medications_dict: dict = {}
         self.incorrect_dosages_dict: dict = {}
         self.prn_medications_dict: dict = {}
+        self.prns_for_current_cycle: list = []
         self.medications_to_ignore: dict = {}
         self.linked_medications: dict = {}
 
@@ -138,6 +146,21 @@ class PillpackPatient:
     def remove_medication_from_prn_dict(self, med_to_be_removed: Medication):
         self.__remove_from_dict_of_medications(med_to_be_removed, self.prn_medications_dict,
                                                "PRN Medications")
+
+    def add_medication_to_prns_for_current_cycle(self, med_to_be_added: Medication):
+        dupe: bool = False
+        for med in self.prns_for_current_cycle:
+            if isinstance(med, Medication):
+                if med.__eq__(med_to_be_added):
+                    dupe = True
+        if not dupe:
+            self.prns_for_current_cycle.append(med_to_be_added)
+
+    def remove_medication_from_prns_for_current_cycle(self, med_to_be_removed: Medication):
+        try:
+            self.prns_for_current_cycle.remove(med_to_be_removed)
+        except ValueError as e:
+            logging.error(e)
 
     def add_medication_link(self, linking_med: Medication, med_to_be_linked: Medication):
         if not self.linked_medications.__contains__(linking_med.medication_name):

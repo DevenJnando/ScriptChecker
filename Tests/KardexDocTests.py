@@ -22,9 +22,17 @@ class KardexDocTests(unittest.TestCase):
         DocxGeneration.generate_kardex_doc_file(self.mock_patient,
                                                 "Test Production",
                                                 "C:\\Users\\Farmadosis\\Test Kardex File.docx")
-        kardex = open("Test Kardex File.docx")
+        kardex = open("C:\\Users\\Farmadosis\\Test Kardex File.docx")
         self.assertIsNotNone(kardex)
         kardex.close()
+
+    def test_populate_prn_list(self):
+        DocxGeneration.generate_prn_list_doc_file(self.mock_patient,
+                                                  "Test Production",
+                                                  "C:\\Users\\Farmadosis\\Test PRN List.docx")
+        prn_list = open("C:\\Users\\Farmadosis\\Test PRN List.docx")
+        self.assertIsNotNone(prn_list)
+        prn_list.close()
 
 
 if __name__ == '__main__':
