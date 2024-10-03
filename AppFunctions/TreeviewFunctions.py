@@ -1,7 +1,7 @@
 from tkinter import StringVar, Menu
 from tkinter.ttk import Treeview
 
-from App import App
+from Application import App
 
 
 def search_treeview(tree_to_search: Treeview, detached_items: list, search_query: StringVar):

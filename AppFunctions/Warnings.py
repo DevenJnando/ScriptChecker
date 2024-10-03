@@ -1,6 +1,6 @@
 from tkinter import Toplevel, Label, Button
 
-from App import App
+from Application import App
 
 
 def display_warning_if_pillpack_data_is_empty(application: App, function, warning_text: str):

@@ -1,8 +1,8 @@
-import App
+import Application.ToolTip
 
 
 def create_tool_tip(widget, text):
-    tool_tip = App.ToolTip(widget)
+    tool_tip = Application.ToolTip.ToolTip(widget)
 
     def enter(event):
         tool_tip.showtip(text)
