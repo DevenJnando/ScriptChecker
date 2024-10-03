@@ -240,23 +240,23 @@ def generate_kardex_doc_file(patient: PillpackPatient, production_group_name: st
     _add_alternating_column_headings(header_cells, 6, 21, "Rx", "P", is_bold=True)
     _format_table_in_range(kardex_table, 2, 6, col_width=0.5)
     _format_table_in_range(kardex_table, 6, len(kardex_table.columns), col_width=0.3)
-    _format_cells_in_range(header_cells, 6, len(kardex_table.columns), font_size=7)
+    _format_cells_in_range(header_cells, 6, len(kardex_table.columns), font_size=10)
     for medication in patient.production_medications_dict.values():
         if isinstance(medication, Medication):
             row_cells = kardex_table.add_row().cells
             _set_cell(row_cells[0], medication.medication_name + " ({0})".format(medication.dosage), font_size=10,
                       spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
             if medication.morning_dosage is not None:
-                _set_cell(row_cells[2], str(medication.morning_dosage), font_size=7,
+                _set_cell(row_cells[2], str(medication.morning_dosage), font_size=11,
                           alignment=WD_ALIGN_PARAGRAPH.CENTER, spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
             if medication.afternoon_dosage is not None:
-                _set_cell(row_cells[3], str(medication.afternoon_dosage), font_size=7,
+                _set_cell(row_cells[3], str(medication.afternoon_dosage), font_size=11,
                           alignment=WD_ALIGN_PARAGRAPH.CENTER, spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
             if medication.evening_dosage is not None:
-                _set_cell(row_cells[4], str(medication.evening_dosage), font_size=7,
+                _set_cell(row_cells[4], str(medication.evening_dosage), font_size=11,
                           alignment=WD_ALIGN_PARAGRAPH.CENTER, spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
             if medication.night_dosage is not None:
-                _set_cell(row_cells[5], str(medication.night_dosage), font_size=7,
+                _set_cell(row_cells[5], str(medication.night_dosage), font_size=11,
                           alignment=WD_ALIGN_PARAGRAPH.CENTER, spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
     script_date_cells = kardex_table.add_row().cells
     _set_cell(script_date_cells[0], "Date of Rx:", is_bold=True, alignment=WD_ALIGN_PARAGRAPH.CENTER,
