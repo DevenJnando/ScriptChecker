@@ -116,6 +116,7 @@ def scan_script(raw_xml_text: str):
                     character = '~'
             sanitised_xml_text += character
         sanitised_xml_text = unescape(sanitised_xml_text)
+        sanitised_xml_text = sanitised_xml_text.replace("&", "and")
         sanitised_xml_text = sanitised_xml_text.encode("iso-8859-1")
         print(sanitised_xml_text)
         document = minidom.parseString(sanitised_xml_text)

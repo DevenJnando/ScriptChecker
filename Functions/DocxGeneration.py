@@ -226,13 +226,13 @@ def generate_kardex_doc_file(patient: PillpackPatient, production_group_name: st
                                 ["Surgery: {0}".format(patient.surgery)],
                                 3.55)
     _create_single_column_table(kardex_doc, container_table_cells[2], "Important Info/Special Instructions:",
-                                ["", "New kardex generated on {0}".format(datetime.date.today())], 3.55, 'Table Grid')
+                                ["", "New kardex generated on {0}".format(datetime.date.today())], 3.55)
     kardex_table = _create_table(kardex_doc, 1, 22, 'Table Grid')
     kardex_table.columns[0].width = Inches(3.1)
     kardex_table.columns[1].width = Inches(0.8)
     header_cells = kardex_table.rows[0].cells
     _add_column_heading(header_cells[0], "Drug name and Strength", is_bold=True)
-    _add_column_heading(header_cells[1], "Change? (Pharmacist signature)", is_bold=True, font_size=7)
+    _add_column_heading(header_cells[1], "Change? (Pharmacist signature)", is_bold=True, font_size=8)
     _add_column_heading(header_cells[2], "M", is_bold=True)
     _add_column_heading(header_cells[3], "L", is_bold=True)
     _add_column_heading(header_cells[4], "T", is_bold=True)
@@ -244,7 +244,7 @@ def generate_kardex_doc_file(patient: PillpackPatient, production_group_name: st
     for medication in patient.production_medications_dict.values():
         if isinstance(medication, Medication):
             row_cells = kardex_table.add_row().cells
-            _set_cell(row_cells[0], medication.medication_name + " ({0})".format(medication.dosage), font_size=10,
+            _set_cell(row_cells[0], medication.medication_name + " ({0})".format(medication.dosage), font_size=11,
                       spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
             if medication.morning_dosage is not None:
                 _set_cell(row_cells[2], str(medication.morning_dosage), font_size=11,
