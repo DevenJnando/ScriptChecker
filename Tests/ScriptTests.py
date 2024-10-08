@@ -1,8 +1,12 @@
+import datetime
 import unittest
 from xml.dom import minidom
 
+from PIL.Image import Image
+
+from Models import PillpackPatient, Medication
 from TestConsts import consts, load_test_settings, populate_test_settings
-from Functions.XML import scan_script
+from Functions.XML import scan_script, encode_prns_to_xml, encode_to_datamatrix
 
 
 class ScriptTests(unittest.TestCase):
@@ -10,6 +14,40 @@ class ScriptTests(unittest.TestCase):
     def setUpClass(cls):
         populate_test_settings()
         cls.config = load_test_settings()
+        cls.mock_patient = PillpackPatient("John", "Thomas", "1999-04-04",
+                                           title="Mr",
+                                           middle_name="John",
+                                           address="42 Poopypants lane",
+                                           healthcare_no="69420",
+                                           postcode="BT69 420",
+                                           script_no="00001",
+                                           surgery="Deez Nuts Medical Practice",
+                                           surgery_address="311 Wobblybollocks Drive",
+                                           surgery_postcode="BT9 KMA",
+                                           doctor_id_no="696969",
+                                           doctor_name="Dr. Hu",
+                                           surgery_id_no="5urg3ry",
+                                           script_id="5cr1pt",
+                                           script_issuer="Me",
+                                           script_date=str(datetime.date.today()))
+        cls.mock_medication_1 = Medication("Medication", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders",
+                                           code="11111111",
+                                           disp_code="0o00000101010101",
+                                           med_type="Capsule"
+        )
+        cls.mock_medication_2 = Medication("Medication2", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders2",
+                                           code="111111112222",
+                                           disp_code="222222",
+                                           med_type="Tablet"
+        )
+        cls.mock_medication_3 = Medication("Medication3", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders3",
+                                           code="23234234",
+                                           disp_code="25456456",
+                                           med_type="Tablussy"
+        )
         with open(consts.MOCK_DATA_DIRECTORY + "\\" + consts.MOCK_SCRIPT_XML) as script_file:
             cls.mock_script = script_file.read()
 
@@ -53,6 +91,21 @@ class ScriptTests(unittest.TestCase):
         else:
             self.fail("Script type incorrect. Expected type: {0}, Actual type: {1}".format(minidom.Document,
                                                                                            type(script_as_xml)))
+
+    def test_encode_prn_medications(self):
+        self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_1)
+        self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_2)
+        self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_3)
+        encoded_script: list = encode_prns_to_xml(self.mock_patient)
+        print(encoded_script)
+        self.assertIsNotNone(encoded_script)
+
+    def test_encode_datamatrix(self):
+        self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_1)
+        self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_2)
+        self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_3)
+        encoded_image: Image = encode_to_datamatrix(encode_prns_to_xml(self.mock_patient))
+        self.assertIsNotNone(encoded_image)
 
 
 if __name__ == '__main__':

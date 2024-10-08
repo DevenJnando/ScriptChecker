@@ -170,6 +170,26 @@ def check_for_linked_medications(medication_to_check: Medication, linked_medicat
         return None
 
 
+def populate_script_patient_and_surgery_data(script_patient: PillpackPatient, production_patient: PillpackPatient):
+    print(production_patient)
+    if production_patient.script_id is None:
+        production_patient.script_id = script_patient.script_id
+        production_patient.script_issuer = script_patient.script_issuer
+        production_patient.script_date = script_patient.script_date
+        production_patient.middle_name = script_patient.middle_name
+        production_patient.healthcare_no = script_patient.healthcare_no
+        production_patient.title = script_patient.title
+        production_patient.script_no = script_patient.script_no
+        production_patient.address = script_patient.address
+        production_patient.postcode = script_patient.postcode
+        production_patient.doctor_id_no = script_patient.doctor_id_no
+        production_patient.doctor_name = script_patient.doctor_name
+        production_patient.surgery_id_no = script_patient.surgery_id_no
+        production_patient.surgery = script_patient.surgery
+        production_patient.surgery_address = script_patient.surgery_address
+        production_patient.surgery_postcode = script_patient.surgery_postcode
+
+
 def extend_existing_patient_medication_dict(patient_object: PillpackPatient, collected_patients: CollectedPatients):
     exists: bool = False
     if collected_patients.all_patients.__contains__(patient_object.last_name.lower()):
@@ -177,6 +197,7 @@ def extend_existing_patient_medication_dict(patient_object: PillpackPatient, col
         for patient_wrapper in list_of_wrappers:
             if isinstance(patient_wrapper["PatientObject"], PillpackPatient):
                 unwrapped_patient: PillpackPatient = patient_wrapper["PatientObject"]
+                populate_script_patient_and_surgery_data(patient_object, unwrapped_patient)
                 match patient_wrapper["Status"]:
                     case consts.PERFECT_MATCH:
                         if unwrapped_patient.__eq__(patient_object):

@@ -15,8 +15,16 @@ consts.PRNS_AND_LINKED_MEDICATIONS_FILE = 'Application/PrnsAndLinkedMeds.pk1'
 
 
 class Medication:
-    def __init__(self, medication_name: str, dosage: float, start_date: datetime):
+    def __init__(self, medication_name: str, dosage: float, start_date: datetime,
+                 doctors_orders: str = None,
+                 code: str = None,
+                 disp_code: str = None,
+                 med_type: str = None):
         self.medication_name: str = medication_name
+        self.doctors_orders: str = doctors_orders
+        self.code: str = code
+        self.disp_code: str = disp_code
+        self.med_type: str = med_type
         self.dosage: float = dosage
         self.start_date: datetime = start_date
         self.morning_dosage = None
@@ -44,12 +52,42 @@ class Medication:
 
 
 class PillpackPatient:
-    def __init__(self, first_name, last_name, date_of_birth, surgery: str = None):
+    def __init__(self, first_name, last_name, date_of_birth,
+                 title: str = None,
+                 middle_name: str = None,
+                 address: str = None,
+                 healthcare_no: str = None,
+                 postcode: str = None,
+                 script_no: str = None,
+                 surgery: str = None,
+                 surgery_address: str = None,
+                 surgery_postcode: str = None,
+                 doctor_id_no: str = None,
+                 doctor_name: str = None,
+                 surgery_id_no: str = None,
+                 script_id: str = None,
+                 script_issuer: str = None,
+                 script_date: str = None
+                 ):
+        self.title: str = title
         self.first_name: str = first_name
+        self.middle_name: str = middle_name
         self.last_name: str = last_name
+        self.healthcare_no: str = healthcare_no
         self.date_of_birth: datetime.date = date_of_birth
         self.start_date: datetime = datetime.date.today()
         self.surgery: str = surgery
+        self.address: str = address
+        self.postcode: str = postcode
+        self.script_no: str = script_no
+        self.surgery_address: str = surgery_address
+        self.surgery_postcode: str = surgery_postcode
+        self.doctor_id_no: str = doctor_id_no
+        self.doctor_name: str = doctor_name
+        self.surgery_id_no: str = surgery_id_no
+        self.script_id: str = script_id
+        self.script_issuer: str = script_issuer
+        self.script_date: str = script_date
         self.manually_checked_flag: bool = False
         self.ready_to_produce_code: int = 0
         self.production_medications_dict: dict = {}

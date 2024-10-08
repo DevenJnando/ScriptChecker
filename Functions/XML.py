@@ -3,6 +3,9 @@ import re
 import xml
 from xml.dom import minidom
 from html import unescape
+from Models import PillpackPatient, Medication
+from pylibdmtx.pylibdmtx import encode
+from PIL import Image
 
 
 def remove_whitespace(node):
@@ -101,7 +104,6 @@ def sanitise_and_encode_text_from_file(filename: str, separating_tag: str, confi
 def scan_script(raw_xml_text: str):
     try:
         sanitised_xml_text = ""
-        print(raw_xml_text)
         for character in raw_xml_text:
             match character:
                 case '"':
@@ -118,7 +120,6 @@ def scan_script(raw_xml_text: str):
         sanitised_xml_text = unescape(sanitised_xml_text)
         sanitised_xml_text = sanitised_xml_text.replace("&", "and")
         sanitised_xml_text = sanitised_xml_text.encode("iso-8859-1")
-        print(sanitised_xml_text)
         document = minidom.parseString(sanitised_xml_text)
         logging.info("Successfully scanned and encoded XML from script.")
         return document
@@ -128,3 +129,86 @@ def scan_script(raw_xml_text: str):
     except TypeError as e:
         logging.error("Failed to read XML from script; a type error has occurred: {0}".format(e))
         return
+
+
+def generate_patient_script_template(patient: PillpackPatient):
+    script_template = ('<xml>'
+                       '<sc id="{0}" ft="{1}" t="{2}"/>'
+                       '<pa h="{3}" s="{4}" f="{5}" m="{6}" l="{7}" x="{8}" '
+                       'a="{9}" pc="{10}" b="{11}"/>'
+                       '<pb i="{12}" d="{13}" n="{14}" pi="{15}" a="{16}" pc="{17}"/>'
+                       .format(patient.script_id,
+                               patient.script_issuer,
+                               patient.script_date,
+                               patient.healthcare_no,
+                               patient.title,
+                               patient.first_name,
+                               patient.middle_name,
+                               patient.last_name,
+                               patient.script_no,
+                               patient.address,
+                               patient.postcode,
+                               str(patient.date_of_birth),
+                               patient.doctor_id_no,
+                               patient.doctor_name,
+                               patient.surgery,
+                               patient.surgery_id_no,
+                               patient.surgery_address,
+                               patient.surgery_postcode)
+                       )
+    return script_template
+
+
+def encode_prns_to_xml(patient: PillpackPatient):
+    script_template = generate_patient_script_template(patient)
+    list_of_drugs_in_xml: list = []
+    for medication in patient.prns_for_current_cycle:
+        if isinstance(medication, Medication):
+            list_of_drugs_in_xml.append(encode_medication_to_xml(medication))
+    for drug in list_of_drugs_in_xml:
+        script_template += drug
+    script_template += "</xml>"
+    return script_template
+
+
+def encode_production_medications_to_xml(patient: PillpackPatient):
+    script_template = generate_patient_script_template(patient)
+    list_of_drugs_in_xml: list = []
+    dict_values_as_list: list = list(patient.production_medications_dict.values())
+    for i in range(0, len(dict_values_as_list)):
+        medication = dict_values_as_list[i]
+        if isinstance(medication, Medication):
+            list_of_drugs_in_xml.append(encode_medication_to_xml(medication))
+    for drug in list_of_drugs_in_xml:
+        script_template += drug
+    script_template += "</xml>"
+    return script_template
+
+
+def encode_to_datamatrix(data_to_encode: str):
+    encoded_datamatrix = encode(data_to_encode.encode("utf8"))
+    img = Image.frombytes('RGB', (encoded_datamatrix.width, encoded_datamatrix.height), encoded_datamatrix.pixels)
+    return img
+
+
+def encode_medication_to_xml(med_to_encode: Medication):
+    encoded_medication: str = ""
+    medication_xml = '<dd d="{0}" do="{1}" c="{2}" q="{3}" dm="{4}" sq="{5}" u="{6}"/>'.format(
+        med_to_encode.medication_name,
+        med_to_encode.doctors_orders,
+        med_to_encode.code,
+        int(med_to_encode.dosage),
+        med_to_encode.disp_code,
+        med_to_encode.dosage,
+        med_to_encode.med_type
+    )
+    for character in medication_xml:
+        match character:
+            case '£':
+                character = '#'
+            case '#':
+                character = '£'
+            case '~':
+                character = '¬'
+        encoded_medication += character
+    return encoded_medication

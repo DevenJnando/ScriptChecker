@@ -136,8 +136,16 @@ def update_medication_dosage(patient_object: PillpackPatient, medication_object:
 def create_medication_object_from_script(medicine_element: minidom.Element):
     medicine_name_on_script = medicine_element.getAttribute("d")
     medicine_dosage_on_script = medicine_element.getAttribute("q")
+    medicine_code = medicine_element.getAttribute("c")
+    medication_doctors_orders = medicine_element.getAttribute("do")
+    medication_dispense_code = medicine_element.getAttribute("dm")
+    medication_type = medicine_element.getAttribute("u")
     medication: Medication = Medication(medicine_name_on_script, float(medicine_dosage_on_script),
-                                        datetime.date.today())
+                                        datetime.date.today(),
+                                        code=medicine_code,
+                                        doctors_orders=medication_doctors_orders,
+                                        disp_code=medication_dispense_code,
+                                        med_type=medication_type)
     logging.info("Extracted Medicine information ({0} x{1}) from the script's XML"
                  .format(medicine_name_on_script, medicine_dosage_on_script))
     return medication
@@ -145,14 +153,51 @@ def create_medication_object_from_script(medicine_element: minidom.Element):
 
 def create_patient_object_from_script(script_xml):
     if isinstance(script_xml, minidom.Document) and script_xml.hasChildNodes():
+        script_details = script_xml.getElementsByTagName("sc")[0]
         patient_details = script_xml.getElementsByTagName("pa")[0]
         surgery_details = script_xml.getElementsByTagName("pb")[0]
+
+        # obtains all script details
+        script_id_no = script_details.getAttribute("id")
+        script_issuer = script_details.getAttribute("ft")
+        script_date = script_details.getAttribute("t")
+
+        # obtains all patient details
         patient_last_name = patient_details.getAttribute("l")
+        patient_middle_name = patient_details.getAttribute("m")
         patient_first_name = patient_details.getAttribute("f")
+        patient_healthcare_no = patient_details.getAttribute("h")
+        patient_title = patient_details.getAttribute("s")
+        script_no = patient_details.getAttribute("x")
+        patient_address = patient_details.getAttribute("a")
+        patient_postcode = patient_details.getAttribute("pc")
         patient_dob = datetime.date.fromisoformat(patient_details.getAttribute("b"))
+
+        # obtains all surgery details
+        doctor_id_no = surgery_details.getAttribute("i")
+        doctor = surgery_details.getAttribute("d")
+        surgery_id_no = surgery_details.getAttribute("pi")
         surgery = surgery_details.getAttribute("n")
+        surgery_address = surgery_details.getAttribute("a")
+        surgery_postcode = surgery_details.getAttribute("pc")
+
         medicines_on_script = script_xml.getElementsByTagName("dd")
-        patient_object = PillpackPatient(patient_first_name, patient_last_name, patient_dob, surgery)
+        patient_object = PillpackPatient(patient_first_name, patient_last_name, patient_dob,
+                                         script_id=script_id_no,
+                                         script_issuer=script_issuer,
+                                         script_date=script_date,
+                                         middle_name=patient_middle_name,
+                                         healthcare_no=patient_healthcare_no,
+                                         title=patient_title,
+                                         script_no=script_no,
+                                         address=patient_address,
+                                         postcode=patient_postcode,
+                                         doctor_id_no=doctor_id_no,
+                                         doctor_name=doctor,
+                                         surgery_id_no=surgery_id_no,
+                                         surgery=surgery,
+                                         surgery_address=surgery_address,
+                                         surgery_postcode=surgery_postcode)
         logging.info("Extracted Patient information ({0} {1} {2}) from script's XML"
                      .format(patient_first_name, patient_last_name, patient_dob))
         for medicine in medicines_on_script:

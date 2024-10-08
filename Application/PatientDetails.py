@@ -362,6 +362,11 @@ class PatientMedicationDetails(Frame):
     def update(self):
         logging.info("PatientMedicationDetails update function called.")
         self._refresh_patient_status()
+        if (len(self.patient_object.matched_medications_dict) != len(self.patient_object.production_medications_dict)
+                and not self.patient_object.manually_checked_flag):
+            self.generate_kardex_button.configure(state="disabled")
+        else:
+            self.generate_kardex_button.configure(state="normal")
         if len(self.patient_object.prns_for_current_cycle) == 0:
             self.generate_prns_button.configure(state="disabled")
         else:
