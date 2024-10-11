@@ -160,6 +160,7 @@ def generate_patient_script_template(patient: PillpackPatient):
 
 
 def encode_prns_to_xml(patient: PillpackPatient):
+    list_of_datamatrices: list = []
     script_template = generate_patient_script_template(patient)
     list_of_drugs_in_xml: list = []
     for medication in patient.prns_for_current_cycle:
@@ -167,22 +168,41 @@ def encode_prns_to_xml(patient: PillpackPatient):
             list_of_drugs_in_xml.append(encode_medication_to_xml(medication))
     for drug in list_of_drugs_in_xml:
         script_template += drug
+        script_template += "</xml>"
+        byte_count = bytearray(script_template, "utf8")
+        if len(byte_count) > 1555:
+            script_template = script_template.replace(drug, "")
+            list_of_datamatrices.append(script_template)
+            script_template = generate_patient_script_template(patient) + drug
+        else:
+            script_template = script_template.replace("</xml>", "")
     script_template += "</xml>"
-    return script_template
+    list_of_datamatrices.append(script_template)
+    return list_of_datamatrices
 
 
-def encode_production_medications_to_xml(patient: PillpackPatient):
+def encode_matched_medications_to_xml(patient: PillpackPatient):
+    list_of_datamatrices: list = []
     script_template = generate_patient_script_template(patient)
     list_of_drugs_in_xml: list = []
-    dict_values_as_list: list = list(patient.production_medications_dict.values())
+    dict_values_as_list: list = list(patient.matched_medications_dict.values())
     for i in range(0, len(dict_values_as_list)):
         medication = dict_values_as_list[i]
         if isinstance(medication, Medication):
             list_of_drugs_in_xml.append(encode_medication_to_xml(medication))
     for drug in list_of_drugs_in_xml:
         script_template += drug
+        script_template += "</xml>"
+        byte_count = bytearray(script_template, "utf8")
+        if len(byte_count) > 1555:
+            script_template = script_template.replace(drug, "")
+            list_of_datamatrices.append(script_template)
+            script_template = generate_patient_script_template(patient) + drug
+        else:
+            script_template = script_template.replace("</xml>", "")
     script_template += "</xml>"
-    return script_template
+    list_of_datamatrices.append(script_template)
+    return list_of_datamatrices
 
 
 def encode_to_datamatrix(data_to_encode: str):

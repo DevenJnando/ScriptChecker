@@ -6,7 +6,7 @@ from PIL.Image import Image
 
 from Models import PillpackPatient, Medication
 from TestConsts import consts, load_test_settings, populate_test_settings
-from Functions.XML import scan_script, encode_prns_to_xml, encode_to_datamatrix
+from Functions.XML import scan_script, encode_prns_to_xml, encode_to_datamatrix, encode_matched_medications_to_xml
 
 
 class ScriptTests(unittest.TestCase):
@@ -35,19 +35,127 @@ class ScriptTests(unittest.TestCase):
                                            code="11111111",
                                            disp_code="0o00000101010101",
                                            med_type="Capsule"
-        )
+                                           )
         cls.mock_medication_2 = Medication("Medication2", 28.0, datetime.date.today(),
                                            doctors_orders="Orders2",
                                            code="111111112222",
                                            disp_code="222222",
                                            med_type="Tablet"
-        )
+                                           )
         cls.mock_medication_3 = Medication("Medication3", 28.0, datetime.date.today(),
                                            doctors_orders="Orders3",
                                            code="23234234",
                                            disp_code="25456456",
                                            med_type="Tablussy"
-        )
+                                           )
+        cls.mock_medication_4 = Medication("Medication4", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders",
+                                           code="11111111",
+                                           disp_code="0o00000101010101",
+                                           med_type="Capsule"
+                                           )
+        cls.mock_medication_5 = Medication("Medication5", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders2",
+                                           code="111111112222",
+                                           disp_code="222222",
+                                           med_type="Tablet"
+                                           )
+        cls.mock_medication_6 = Medication("Medication6", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders3",
+                                           code="23234234",
+                                           disp_code="25456456",
+                                           med_type="Tablussy"
+                                           )
+        cls.mock_medication_7 = Medication("Medication7", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders",
+                                           code="11111111",
+                                           disp_code="0o00000101010101",
+                                           med_type="Capsule"
+                                           )
+        cls.mock_medication_8 = Medication("Medication8", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders2",
+                                           code="111111112222",
+                                           disp_code="222222",
+                                           med_type="Tablet"
+                                           )
+        cls.mock_medication_9 = Medication("Medication9", 28.0, datetime.date.today(),
+                                           doctors_orders="Orders3",
+                                           code="23234234",
+                                           disp_code="25456456",
+                                           med_type="Tablussy"
+                                           )
+        cls.mock_medication_10 = Medication("Medication10", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders",
+                                            code="11111111",
+                                            disp_code="0o00000101010101",
+                                            med_type="Capsule"
+                                            )
+        cls.mock_medication_11 = Medication("Medication11", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders2",
+                                            code="111111112222",
+                                            disp_code="222222",
+                                            med_type="Tablet"
+                                            )
+        cls.mock_medication_12 = Medication("Medication12", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders3",
+                                            code="23234234",
+                                            disp_code="25456456",
+                                            med_type="Tablussy"
+                                            )
+        cls.mock_medication_13 = Medication("Medication13", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders",
+                                            code="11111111",
+                                            disp_code="0o00000101010101",
+                                            med_type="Capsule"
+                                            )
+        cls.mock_medication_14 = Medication("Medication14", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders2",
+                                            code="111111112222",
+                                            disp_code="222222",
+                                            med_type="Tablet"
+                                            )
+        cls.mock_medication_15 = Medication("Medication15", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders3",
+                                            code="23234234",
+                                            disp_code="25456456",
+                                            med_type="Tablussy"
+                                            )
+        cls.mock_medication_16 = Medication("Medication16", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders",
+                                            code="11111111",
+                                            disp_code="0o00000101010101",
+                                            med_type="Capsule"
+                                            )
+        cls.mock_medication_17 = Medication("Medication17", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders2",
+                                            code="111111112222",
+                                            disp_code="222222",
+                                            med_type="Tablet"
+                                            )
+        cls.mock_medication_18 = Medication("Medication18", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders3",
+                                            code="23234234",
+                                            disp_code="25456456",
+                                            med_type="Tablussy"
+                                            )
+        cls.mock_medication_19 = Medication("Medication19", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders",
+                                            code="11111111",
+                                            disp_code="0o00000101010101",
+                                            med_type="Capsule"
+                                            )
+        cls.mock_medication_20 = Medication("Medication20", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders2",
+                                            code="111111112222",
+                                            disp_code="222222",
+                                            med_type="Tablet"
+                                            )
+        cls.mock_medication_21 = Medication("Medication21", 28.0, datetime.date.today(),
+                                            doctors_orders="Orders3",
+                                            code="23234234",
+                                            disp_code="25456456",
+                                            med_type="Tablussy"
+                                            )
         with open(consts.MOCK_DATA_DIRECTORY + "\\" + consts.MOCK_SCRIPT_XML) as script_file:
             cls.mock_script = script_file.read()
 
@@ -96,16 +204,46 @@ class ScriptTests(unittest.TestCase):
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_1)
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_2)
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_3)
-        encoded_script: list = encode_prns_to_xml(self.mock_patient)
-        print(encoded_script)
-        self.assertIsNotNone(encoded_script)
+        encoded_scripts: list = encode_prns_to_xml(self.mock_patient)
+        for script in encoded_scripts:
+            print(script)
+        self.assertIsNotNone(encoded_scripts)
 
-    def test_encode_datamatrix(self):
+    def test_encode_matched_medications(self):
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_1)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_2)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_3)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_4)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_5)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_6)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_7)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_8)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_9)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_10)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_11)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_12)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_13)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_14)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_15)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_16)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_17)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_18)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_19)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_20)
+        self.mock_patient.add_medication_to_matched_dict(self.mock_medication_21)
+        encoded_scripts: list = encode_matched_medications_to_xml(self.mock_patient)
+        for script in encoded_scripts:
+            print(script)
+        self.assertIsNotNone(encoded_scripts)
+
+    def test_encode_prns_to_datamatrix(self):
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_1)
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_2)
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_3)
-        encoded_image: Image = encode_to_datamatrix(encode_prns_to_xml(self.mock_patient))
-        self.assertIsNotNone(encoded_image)
+        encoded_scripts: list = encode_prns_to_xml(self.mock_patient)
+        for script in encoded_scripts:
+            encoded_image: Image = encode_to_datamatrix(script)
+            self.assertIsNotNone(encoded_image)
 
 
 if __name__ == '__main__':

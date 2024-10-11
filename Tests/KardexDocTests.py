@@ -27,7 +27,7 @@ class KardexDocTests(unittest.TestCase):
         kardex.close()
 
     def test_populate_prn_list(self):
-        DocxGeneration.generate_prn_list_doc_file(self.mock_patient,
+        DocxGeneration.generate_dispensation_list_doc_file(self.mock_patient,
                                                   "Test Production",
                                                   "C:\\Users\\Farmadosis\\Test PRN List.docx")
         prn_list = open("C:\\Users\\Farmadosis\\Test PRN List.docx")

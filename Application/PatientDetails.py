@@ -65,7 +65,7 @@ class PatientMedicationDetails(Frame):
                                                  self.patient_object,
                                                  self.master.group_production_name
                                              ))
-        self.generate_prns_button = Button(self.display_frame, text="Generate PRN list",
+        self.generate_prns_button = Button(self.display_frame, text="Generate Dispensation list",
                                            command=lambda: generate_prn_list_for_current_cycle(
                                                self.patient_object,
                                                self.master.group_production_name
@@ -174,7 +174,8 @@ class PatientMedicationDetails(Frame):
                              include_prn_medications_button: bool = False,
                              include_delete_prn_medications_button: bool = False,
                              create_medication_link_button: bool = False,
-                             remove_from_ignored_medications_button=False
+                             remove_from_ignored_medications_button=False,
+                             include_doctors_directions: bool = False
                              ):
         values: list = []
         if dictionary_to_iterate is not None:
@@ -182,22 +183,28 @@ class PatientMedicationDetails(Frame):
         elif list_to_iterate is not None:
             values: list = list_to_iterate
         if len(values) > 0:
-            production_medication_label = Label(self.display_frame, text=frame_title)
-            production_medication_label.grid(row=row_number, column=0, pady=20)
+            medication_label = Label(self.display_frame, text=frame_title)
+            medication_label.grid(row=row_number, column=0, pady=20)
             label_frame_to_populate.grid(row=row_number + 1, column=0, padx=20, pady=20, sticky="ew")
             medication_name_label = Label(label_frame_to_populate, text="Medication Name")
             medication_name_label.grid(row=0, column=0)
             medication_dosage_label = Label(label_frame_to_populate, text="Dosage")
             medication_dosage_label.grid(row=0, column=1)
+            if include_doctors_directions:
+                doctors_directions_label = Label(label_frame_to_populate, text="Doctor's Orders")
+                doctors_directions_label.grid(row=0, column=2)
         for i in range(0, len(values)):
             medication = values[i]
             if isinstance(medication, Medication):
                 logging.info("Displaying medication {0}".format(medication.medication_name))
                 medication_name_label = Label(label_frame_to_populate, text=medication.medication_name,
-                                              wraplength=200)
+                                              wraplength=150)
                 medication_dosage_label = Label(label_frame_to_populate, text=medication.dosage)
                 medication_name_label.grid(row=i + 1, column=0)
                 medication_dosage_label.grid(row=i + 1, column=1)
+                if include_doctors_directions:
+                    doctors_directions = Label(label_frame_to_populate, text=medication.doctors_orders, wraplength=150)
+                    doctors_directions.grid(row=i + 1, column=2)
                 if self.patient_object.linked_medications.__contains__(medication.medication_name):
                     linked_medication: Medication = self.patient_object.linked_medications[medication.medication_name]
                     link_icon_label = Label(label_frame_to_populate, image=self.linked_medication_image)
@@ -364,10 +371,6 @@ class PatientMedicationDetails(Frame):
         self._refresh_patient_status()
         if (len(self.patient_object.matched_medications_dict) != len(self.patient_object.production_medications_dict)
                 and not self.patient_object.manually_checked_flag):
-            self.generate_kardex_button.configure(state="disabled")
-        else:
-            self.generate_kardex_button.configure(state="normal")
-        if len(self.patient_object.prns_for_current_cycle) == 0:
             self.generate_prns_button.configure(state="disabled")
         else:
             self.generate_prns_button.configure(state="normal")
@@ -387,14 +390,16 @@ class PatientMedicationDetails(Frame):
         self.populate_label_frame(self.matched_medication_frame,
                                   "Matched Medications",
                                   3,
-                                  dictionary_to_iterate=self.patient_object.matched_medications_dict
+                                  dictionary_to_iterate=self.patient_object.matched_medications_dict,
+                                  include_doctors_directions=True
                                   )
         self.populate_label_frame(self.prn_medications_frame,
                                   "PRN Medications Outside Pillpack",
                                   5,
                                   list_to_iterate=self.patient_object.prns_for_current_cycle,
                                   include_prn_medications_button=False,
-                                  include_delete_prn_medications_button=True
+                                  include_delete_prn_medications_button=True,
+                                  include_doctors_directions=True
                                   )
         self.populate_label_frame(self.missing_medication_frame,
                                   "Missing Medications",
@@ -409,7 +414,8 @@ class PatientMedicationDetails(Frame):
                                   dictionary_to_iterate=self.patient_object.unknown_medications_dict,
                                   include_prn_medications_button=True,
                                   include_delete_prn_medications_button=False,
-                                  create_medication_link_button=True
+                                  create_medication_link_button=True,
+                                  include_doctors_directions=True
                                   )
         self.populate_label_frame(self.ignore_medications_frame,
                                   "Ignored Incorrect Dosages",

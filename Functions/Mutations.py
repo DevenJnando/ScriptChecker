@@ -97,7 +97,7 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
             logging.info("Comparing pillpack medication ({0}) with matched medication on scanned script ({1})"
                          .format(pillpack_medication.medication_name, script_medication.medication_name))
             if pillpack_medication.dosage_equals(script_medication):
-                patient_from_production.add_medication_to_matched_dict(pillpack_medication)
+                patient_from_production.add_medication_to_matched_dict(script_medication)
                 clear_medication_warning_dicts(patient_from_production, pillpack_medication)
                 logging.info("Medications and dosages match. Adding medication {0} to matched medications dictionary"
                              .format(script_medication.medication_name))
@@ -108,14 +108,17 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
                              "incorrect dosages dictionary.".format(script_medication.medication_name))
         elif not patient_from_script.production_medications_dict.__contains__(medication):
             if not patient_from_production.matched_medications_dict.__contains__(medication):
-                if (not patient_from_production.prn_medications_dict.__contains__(medication)
-                        and not patient_from_production.medications_to_ignore.__contains__(medication)
-                        and not patient_from_production.linked_medications.__contains__(medication)):
-                    patient_from_production.add_medication_to_missing_dict(full_medication_dict[medication])
-                    logging.info("Medication {0} is not present on the scanned script. "
-                                 "No exceptions for this medication exist. "
-                                 "Adding to the missing medication dictionary."
-                                 .format(medication))
+                substring_results = [key for key in patient_from_production.matched_medications_dict.keys()
+                                     if medication in key]
+                if len(substring_results) == 0:
+                    if (not patient_from_production.prn_medications_dict.__contains__(medication)
+                            and not patient_from_production.medications_to_ignore.__contains__(medication)
+                            and not check_for_medication_linkage(patient_from_production.linked_medications, medication)):
+                        patient_from_production.add_medication_to_missing_dict(full_medication_dict[medication])
+                        logging.info("Medication {0} is not present on the scanned script. "
+                                     "No exceptions for this medication exist. "
+                                     "Adding to the missing medication dictionary."
+                                     .format(medication))
     for medication in script_medication_dict.keys():
         substring_results = [key for key in full_medication_dict.keys() if key in medication]
         if len(substring_results) > 0:
@@ -151,8 +154,16 @@ def clear_medication_warning_dicts(patient: PillpackPatient, medication: Medicat
     patient.remove_medication_from_missing_dict(medication)
     patient.remove_medication_from_incorrect_dosage_dict(medication)
     patient.remove_medication_from_unknown_dict(medication)
-    logging.info("Removed medication {0} from missing medications, incorrect dosages and unknown medications "
-                 "dictionaries.".format(medication.medication_name))
+
+
+def check_for_medication_linkage(linked_dict: dict, medication: Medication):
+    linkage_exists: bool = False
+    for value in linked_dict.values():
+        if isinstance(value, Medication):
+            if medication.__eq__(value):
+                linkage_exists = True
+                break
+    return linkage_exists
 
 
 def check_for_linked_medications(medication_to_check: Medication, linked_medication_dict: dict):

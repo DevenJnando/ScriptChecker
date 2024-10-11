@@ -124,18 +124,20 @@ class PillpackPatient:
     @staticmethod
     def __add_to_dict_of_medications(medication_to_add: Medication, dict_to_add_to: dict,
                                      name_of_dict: str):
-        if not dict_to_add_to.__contains__(medication_to_add.medication_name):
-            dict_to_add_to[medication_to_add.medication_name] = medication_to_add
-            logging.info("Added medication {0} to dictionary {1}"
-                         .format(medication_to_add.medication_name, name_of_dict))
+        if isinstance(medication_to_add, Medication):
+            if not dict_to_add_to.__contains__(medication_to_add.medication_name):
+                dict_to_add_to[medication_to_add.medication_name] = medication_to_add
+                logging.info("Added medication {0} to dictionary {1}"
+                             .format(medication_to_add.medication_name, name_of_dict))
 
     @staticmethod
     def __remove_from_dict_of_medications(medication_to_remove: Medication, dict_to_remove_from: dict,
                                           name_of_dict: str):
-        if dict_to_remove_from.__contains__(medication_to_remove.medication_name):
-            dict_to_remove_from.pop(medication_to_remove.medication_name)
-            logging.info("Removed medication {0} from dictionary {1}"
-                         .format(medication_to_remove.medication_name, name_of_dict))
+        if isinstance(medication_to_remove, Medication):
+            if dict_to_remove_from.__contains__(medication_to_remove.medication_name):
+                dict_to_remove_from.pop(medication_to_remove.medication_name)
+                logging.info("Removed medication {0} from dictionary {1}"
+                             .format(medication_to_remove.medication_name, name_of_dict))
 
     def add_medication_to_production_dict(self, med_to_be_added: Medication):
         self.__add_to_dict_of_medications(med_to_be_added, self.production_medications_dict,
