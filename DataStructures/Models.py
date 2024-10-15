@@ -10,8 +10,8 @@ consts.DO_NOT_PRODUCE = 4
 consts.MANUALLY_CHECKED = 5
 consts.PRN_KEY = "prns_dict"
 consts.LINKED_MEDS_KEY = "linked_meds_dict"
-consts.COLLECTED_PATIENTS_FILE = 'Application/Patients.pk1'
-consts.PRNS_AND_LINKED_MEDICATIONS_FILE = 'Application/PrnsAndLinkedMeds.pk1'
+consts.COLLECTED_PATIENTS_FILE = '../Application/Patients.pk1'
+consts.PRNS_AND_LINKED_MEDICATIONS_FILE = '../Application/PrnsAndLinkedMeds.pk1'
 
 
 class Medication:

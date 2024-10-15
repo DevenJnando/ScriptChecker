@@ -3,7 +3,7 @@ from tkinter import Frame, Button, filedialog, Toplevel, Label
 from zipfile import ZipFile
 
 from AppFunctions.Warnings import display_warning_if_pillpack_data_is_empty
-from ScanScripts import ScanScripts
+from Application.ScanScripts import ScanScripts
 from Functions.ConfigSingleton import consts, warning_constants
 from Functions.DAOFunctions import load_collected_patients_from_zip_file, save_collected_patients
 
@@ -69,7 +69,7 @@ class SideBar(Frame):
 
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
-            self.script_window = ScanScripts(self, self.master)  # create window if its None or destroyed
+            self.script_window = ScanScripts(self, self.master)
             self.script_window.grab_set()
         else:
-            self.script_window.focus()  # if window exists focus it
+            self.script_window.focus()

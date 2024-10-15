@@ -3,7 +3,7 @@ import re
 import xml
 from xml.dom import minidom
 from html import unescape
-from Models import PillpackPatient, Medication
+from DataStructures.Models import PillpackPatient, Medication
 from pylibdmtx.pylibdmtx import encode
 from PIL import Image
 
@@ -57,32 +57,32 @@ def sanitise_and_encode_text_from_file(filename: str, separating_tag: str, confi
             raw_binary = raw_file.read()
             raw_text = str(raw_binary)
 
-            # This is a really horrible hack...wraps the xml in tags
+            """This is a really horrible hack...wraps the xml in tags"""
             trimmed_text = "<" + raw_text.split("<", 1)[1].rsplit(">\\n", 1)[0] + ">"
 
-            # Makes the content within the OrderInfo tags a bit more readable.
+            """Makes the content within the OrderInfo tags a bit more readable."""
             sanitised_text = re.sub("</" + separating_tag + ">.*?<" + separating_tag + ">",
                                     "</" + separating_tag + ">\n<" + separating_tag + ">",
                                     trimmed_text,
                                     flags=re.DOTALL)
 
-            # For some reason, pillpack adds a bunch of garbage text before the start of the XML tag.
-            # This line removes all that crap so the XML can be interpreted correctly.
+            """For some reason, pillpack adds a bunch of garbage text before the start of the XML tag.
+            This line removes all that crap so the XML can be interpreted correctly."""
             sanitised_text = re.sub(r'^.*?<\?xml', "<?xml", sanitised_text)
             encoded_text = sanitised_text.encode('utf8').decode('unicode-escape')
 
-            # Splits each OrderInfo tag and sets each of them as an element in a list.
+            """Splits each OrderInfo tag and sets each of them as an element in a list."""
             list_of_strings = encoded_text.split("</" + separating_tag + ">")
             for i in range(0, len(list_of_strings)):
                 string = list_of_strings[i]
                 if len(string) > 0:
 
-                    # Utterly awful, primitive way of adding the xml version + encoding if it doesn't exist in the
-                    # pillpack production file for some reason
+                    """Utterly awful, primitive way of adding the xml version + encoding if it doesn't exist in the
+                    pillpack production file for some reason"""
                     if '<?xml version="1.0" encoding="utf-8"?>' not in string:
                         string = '<?xml version="1.0" encoding="utf-8"?>' + string
 
-                    # Ditto for the OrderInfo closing tags
+                    """Ditto for the OrderInfo closing tags"""
                     if '</' + separating_tag + '>' not in string:
                         string = string + '</' + separating_tag + '>'
                     if '<' + separating_tag + '>' in string:

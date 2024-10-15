@@ -5,7 +5,7 @@ from Functions.XML import parse_xml_ppc, sanitise_and_encode_text_from_file
 from Functions.DAOFunctions import scan_pillpack_folder
 from Functions.ModelBuilder import create_patient_object_from_pillpack_data
 
-import Models
+from DataStructures import Models
 from TestConsts import consts, populate_test_settings, load_test_settings
 import unittest
 

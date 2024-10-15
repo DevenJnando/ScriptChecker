@@ -10,7 +10,7 @@ import App
 from Functions.ConfigSingleton import consts
 from Functions.DAOFunctions import save_collected_patients
 from Functions.ModelFactory import get_patient_medicine_data_ppc
-from Repositories import CollectedPatients
+from DataStructures.Repositories import CollectedPatients
 
 
 class PopulatePatientData(Toplevel):

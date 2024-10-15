@@ -2,8 +2,8 @@ import datetime
 import logging
 import re
 
-from Models import PillpackPatient, Medication
-from Repositories import CollectedPatients
+from DataStructures.Models import PillpackPatient, Medication
+from DataStructures.Repositories import CollectedPatients
 from Functions.ConfigSingleton import consts
 from Functions.XML import scan_script
 from Functions.ModelBuilder import create_patient_object_from_script

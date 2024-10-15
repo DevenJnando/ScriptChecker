@@ -4,8 +4,8 @@ import App
 from tkinter import Frame, Label, Button, StringVar, font, ttk
 
 from SideBar import SideBar
-from WatchdogEventHandler import WatchdogEventHandler
-from WelcomeMessage import NoPillpackFolderLocationSetWarning
+from Application.WatchdogEventHandler import WatchdogEventHandler
+from Application.WelcomeMessage import NoPillpackFolderLocationSetWarning
 from Functions.ConfigSingleton import consts
 
 

@@ -5,14 +5,14 @@ from tkinter import Label, Button, Frame, LabelFrame, PhotoImage, font, ttk
 from tkinter.constants import VERTICAL, Y
 
 from AppFunctions.CreateToolTip import create_tool_tip
-import LinkMedication
+from Application.LinkMedication import LinkMedication
 from Functions.KardexAndPRNGeneration import generate_patient_kardex, generate_prn_list_for_current_cycle
-from UnlinkMedication import UnlinkMedication
+from Application.UnlinkMedication import UnlinkMedication
 from Functions.ConfigSingleton import consts
 from Functions.DAOFunctions import save_collected_patients, update_current_prns_and_linked_medications
-from SideBar import SideBar
-from HomeScreen import HomeScreen
-from Models import PillpackPatient, Medication
+from Application.SideBar import SideBar
+from Application.HomeScreen import HomeScreen
+from DataStructures.Models import PillpackPatient, Medication
 
 
 class PatientMedicationDetails(Frame):
@@ -304,10 +304,10 @@ class PatientMedicationDetails(Frame):
     def open_link_medication_view(self, selected_medication: Medication):
         if self.link_medication_window is None or not self.link_medication_window.winfo_exists():
             logging.info("No Link Medication view has been instantiated. Creating new Scan Scripts view...")
-            self.link_medication_window = LinkMedication.LinkMedication(self,
-                                                                        self.patient_object,
-                                                                        selected_medication,
-                                                                        self.master)
+            self.link_medication_window = LinkMedication(self,
+                                                         self.patient_object,
+                                                         selected_medication,
+                                                         self.master)
             self.link_medication_window.grab_set()
         else:
             self.link_medication_window.focus()

@@ -1,7 +1,6 @@
 import logging
-import sys
 
-from Models import PillpackPatient
+from DataStructures.Models import PillpackPatient
 
 
 class CollectedPatients:

@@ -2,8 +2,7 @@ import datetime
 import unittest
 
 import Functions.ConfigSingleton
-import Models
-import Repositories
+from DataStructures import Models, Repositories
 from TestConsts import consts, load_test_settings, populate_test_settings
 
 

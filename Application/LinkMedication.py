@@ -4,7 +4,7 @@ from tkinter.ttk import Treeview
 
 import App
 from Functions.DAOFunctions import save_collected_patients, update_current_prns_and_linked_medications
-from Models import PillpackPatient, Medication
+from DataStructures.Models import PillpackPatient, Medication
 
 
 class LinkMedication(Toplevel):

@@ -4,7 +4,7 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
 from Functions.DAOFunctions import save_collected_patients
 from Functions.ModelFactory import get_patient_data_from_specific_file, get_patient_medicine_data_xml
-from Models import PillpackPatient
+from DataStructures.Models import PillpackPatient
 
 
 class WatchdogEventHandler(FileSystemEventHandler):

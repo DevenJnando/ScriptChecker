@@ -9,12 +9,12 @@ from AppFunctions.TreeviewFunctions import popup_menu, calibrate_width, retrieve
     sort_treeview
 from AppFunctions.Warnings import display_warning_if_pillpack_data_is_not_empty, \
     display_warning_if_pillpack_data_is_empty
-import LoadNewProduction
-import ScanScripts
+from Application.ScanScripts import ScanScripts
+from Application.LoadNewProduction import PopulatePatientData
 from Functions.ConfigSingleton import warning_constants, consts
 from Functions.DAOFunctions import save_collected_patients, archive_pillpack_production
-from Models import PillpackPatient
-from Repositories import CollectedPatients
+from DataStructures.Models import PillpackPatient
+from DataStructures.Repositories import CollectedPatients
 import SideBar
 
 
@@ -121,8 +121,6 @@ class HomeScreen(Frame):
         self.production_patients_tree = Treeview(self.production_patients_results,
                                                  columns=self.columns,
                                                  height=10)
-        # Add a menu for all other trees, also restructure this view/controller section of the application into
-        # separate classes.
         self.production_right_click_menu = Menu(self.production_patients_tree, tearoff=0)
         self.production_right_click_menu.add_command(label="View Patient",
                                                      command=lambda: self.on_treeview_double_click(
@@ -441,7 +439,7 @@ class HomeScreen(Frame):
     def open_scan_scripts_window(self):
         if self.script_window is None or not self.script_window.winfo_exists():
             logging.info("No Scan Scripts view has been instantiated. Creating new Scan Scripts view...")
-            self.script_window = ScanScripts.ScanScripts(self, self.master)
+            self.script_window = ScanScripts(self, self.master)
             self.script_window.grab_set()
             self.script_window.attributes('-topmost', 'true')
         else:
@@ -476,7 +474,7 @@ class HomeScreen(Frame):
     def open_populate_patients_window(self):
         if self.populate_patients_window is None or not self.populate_patients_window.winfo_exists():
             logging.info("No Populate Patients view has been instatiated. Creating new Populate Patients view...")
-            self.populate_patients_window = LoadNewProduction.PopulatePatientData(self, self.master)
+            self.populate_patients_window = PopulatePatientData(self, self.master)
             self.populate_patients_window.grab_set()
         else:
             logging.info("Populate Patients view is now in focus.")

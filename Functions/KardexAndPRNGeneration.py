@@ -2,7 +2,7 @@ import datetime
 from tkinter import filedialog
 
 from Functions.DocxGeneration import generate_kardex_doc_file, generate_dispensation_list_doc_file
-from Models import PillpackPatient
+from DataStructures.Models import PillpackPatient
 
 
 def generate_patient_kardex(patient: PillpackPatient, production_name: str):

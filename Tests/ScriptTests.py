@@ -4,7 +4,7 @@ from xml.dom import minidom
 
 from PIL.Image import Image
 
-from Models import PillpackPatient, Medication
+from DataStructures.Models import PillpackPatient, Medication
 from TestConsts import consts, load_test_settings, populate_test_settings
 from Functions.XML import scan_script, encode_prns_to_xml, encode_to_datamatrix, encode_matched_medications_to_xml
 

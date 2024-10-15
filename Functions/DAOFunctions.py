@@ -4,8 +4,8 @@ import pickle
 from os import scandir
 from zipfile import ZipFile
 from Functions.ConfigSingleton import consts
-from Models import PillpackPatient
-from Repositories import CollectedPatients
+from DataStructures.Models import PillpackPatient
+from DataStructures.Repositories import CollectedPatients
 
 import logging
 

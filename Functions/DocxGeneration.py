@@ -1,5 +1,4 @@
 import datetime
-import io
 import logging
 import os
 from typing import Callable
@@ -9,10 +8,9 @@ from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Inches, Pt
 from docx.table import _Cell, Table
-from PIL import Image
 
 from Functions.XML import encode_prns_to_xml, encode_to_datamatrix, encode_matched_medications_to_xml
-from Models import Medication, PillpackPatient
+from DataStructures.Models import Medication, PillpackPatient
 
 
 def _create_doc_file_custom_page_format(is_portrait: bool, top_margin: float, bottom_margin: float, left_margin: float,

@@ -7,7 +7,7 @@ from tkinter.ttk import Treeview
 
 from Functions.ConfigSingleton import consts
 from Functions.Mutations import scan_script_and_check_medications
-from Models import PillpackPatient
+from DataStructures.Models import PillpackPatient
 
 
 class ScanScripts(Toplevel):

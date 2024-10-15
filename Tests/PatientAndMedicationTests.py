@@ -6,7 +6,7 @@ from Functions.ModelBuilder import (create_patient_object_from_pillpack_data,
                                     get_medication_take_times,
                                     get_specified_medication_take_times)
 from Functions.DAOFunctions import retrieve_prns_and_linked_medications
-import Models
+from DataStructures import Models
 import datetime
 
 

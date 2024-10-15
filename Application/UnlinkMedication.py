@@ -1,9 +1,8 @@
-import logging
 import App
 from tkinter import Toplevel, Label, Button
 
 from Functions.DAOFunctions import save_collected_patients, update_current_prns_and_linked_medications
-from Models import PillpackPatient, Medication
+from DataStructures.Models import PillpackPatient, Medication
 
 
 class UnlinkMedication(Toplevel):

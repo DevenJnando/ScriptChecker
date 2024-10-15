@@ -3,7 +3,7 @@ from functools import reduce
 from Functions.XML import sanitise_and_encode_text_from_file, parse_xml_ppc, parse_xml_fd
 from Functions.DAOFunctions import scan_pillpack_folder, retrieve_prns_and_linked_medications
 from Functions.ModelBuilder import create_patient_object_from_pillpack_data
-from Models import PillpackPatient
+from DataStructures.Models import PillpackPatient
 
 
 def add_patient_to_dict(patient_object: PillpackPatient, dict_of_patients: dict):
