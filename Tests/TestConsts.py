@@ -8,6 +8,7 @@ consts.SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 consts.MOCK_DATA_DIRECTORY = consts.SCRIPT_DIR + "\\MockData"
 consts.BAD_XML_PPC = "bad_xml.ppc_processed"
 consts.MOCK_PATIENT_XML = "mock_patient_xml.ppc_processed"
+consts.MOCK_PATIENT_XML_2 = "mock_patient_xml2.ppc_processed"
 consts.MOCK_SCRIPT_XML = "mock_script_xml.txt"
 consts.TEST_SETTINGS = consts.SCRIPT_DIR + "\\test_settings.yaml"
 consts.PPC_SEPARATING_TAG = "OrderInfo"

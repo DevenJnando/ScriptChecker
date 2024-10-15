@@ -1,8 +1,12 @@
 import unittest
 from functools import reduce
 from TestConsts import consts, populate_test_settings, load_test_settings
-import Models
-import Functions
+from Functions.XML import parse_xml_ppc, sanitise_and_encode_text_from_file
+from Functions.ModelBuilder import (create_patient_object_from_pillpack_data,
+                                    get_medication_take_times,
+                                    get_specified_medication_take_times)
+from Functions.DAOFunctions import retrieve_prns_and_linked_medications
+from DataStructures import Models
 import datetime
 
 
@@ -11,7 +15,6 @@ class PatientAndMedicationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         populate_test_settings()
-        Functions.config = load_test_settings()
         mock_prn_1: Models.Medication = Models.Medication("Not real",
                                                           28,
                                                           datetime.date.fromisoformat("2024-08-22")
@@ -35,16 +38,16 @@ class PatientAndMedicationTests(unittest.TestCase):
                 }
             }
         }
-        cls.list_of_orders: list = reduce(list.__add__, Functions._parse_xml(
-            Functions._sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
-                                                          consts.PPC_SEPARATING_TAG)
+        cls.list_of_orders: list = reduce(list.__add__, parse_xml_ppc(
+            sanitise_and_encode_text_from_file(consts.MOCK_PATIENT_XML,
+                                               consts.PPC_SEPARATING_TAG, load_test_settings())
         ))
 
     def test_retrieve_prns_and_linked_medications(self):
         for order in self.list_of_orders:
-            patient_object = Functions._create_patient_object(order)
-            patient_object = Functions.retrieve_prns_and_linked_medications(patient_object,
-                                                                            self.mock_prns_and_ignored_meds)
+            patient_object = create_patient_object_from_pillpack_data(order)
+            patient_object = retrieve_prns_and_linked_medications(patient_object,
+                                                                  self.mock_prns_and_ignored_meds)
             for i in range(len(patient_object.prn_medications_dict)):
                 prn_medication = list(patient_object.prn_medications_dict.values())[i]
                 if isinstance(prn_medication, Models.Medication):
@@ -79,6 +82,30 @@ class PatientAndMedicationTests(unittest.TestCase):
                     self.fail("Reading Linked medications has failed. The element {0} should be of type {1}, "
                               "but was of type {2}".format(linked_medication, type(Models.Medication),
                                                            type(linked_medication)))
+
+    def test_medication_time_of_day(self):
+        mock_medication = Models.Medication("Fake Med", 28, datetime.date.today())
+        get_medication_take_times("MORNING", 1, mock_medication)
+        get_medication_take_times("AFTERNOON", 1, mock_medication)
+        get_medication_take_times("EVENING", 1, mock_medication)
+        get_medication_take_times("NIGHT", 1, mock_medication)
+        self.assertEqual(1, mock_medication.morning_dosage)
+        self.assertEqual(1, mock_medication.afternoon_dosage)
+        self.assertEqual(1, mock_medication.evening_dosage)
+        self.assertEqual(1, mock_medication.night_dosage)
+
+    def test_specific_medication_time_of_day(self):
+        mock_medication = Models.Medication("Fake Med", 28, datetime.date.today())
+        get_specified_medication_take_times("Poo", 1, mock_medication)
+        get_specified_medication_take_times("WhoopsH", 1, mock_medication)
+        get_specified_medication_take_times("08H00", 1, mock_medication)
+        get_specified_medication_take_times("13H30", 1, mock_medication)
+        get_specified_medication_take_times("18H00", 1, mock_medication)
+        get_specified_medication_take_times("21H00", 1, mock_medication)
+        self.assertEqual("1\n(8:00)", mock_medication.morning_dosage)
+        self.assertEqual("1\n(13:30)", mock_medication.afternoon_dosage)
+        self.assertEqual("1\n(18:00)", mock_medication.evening_dosage)
+        self.assertEqual("1\n(21:00)", mock_medication.night_dosage)
 
 
 if __name__ == '__main__':

@@ -1,8 +1,8 @@
 import datetime
 import unittest
 
-import Functions
-import Models
+import Functions.ConfigSingleton
+from DataStructures import Models, Repositories
 from TestConsts import consts, load_test_settings, populate_test_settings
 
 
@@ -10,7 +10,7 @@ class ModelUnitTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         populate_test_settings()
-        Functions.config = load_test_settings()
+        Functions.ConfigSingleton.config = load_test_settings()
         cls.mock_patient = Models.PillpackPatient("Real", "Patient", datetime.date.today())
         cls.mock_patient2 = Models.PillpackPatient("Totally", "Real", datetime.date.today())
         cls.mock_patient3 = Models.PillpackPatient("Trustme", "Bro", datetime.date.today())
@@ -19,7 +19,7 @@ class ModelUnitTests(unittest.TestCase):
         cls.mock_medicine1 = Models.Medication("First medication", 28, datetime.date.today())
         cls.mock_medicine2 = Models.Medication("Second medication", 28, datetime.date.today())
         cls.mock_medicine3 = Models.Medication("Third medication", 56, datetime.date.today())
-        cls.mock_collected_patients = Models.CollectedPatients()
+        cls.mock_collected_patients = Repositories.CollectedPatients()
         cls.mock_collected_patients.add_pillpack_patient(cls.mock_patient)
         cls.mock_collected_patients.add_pillpack_patient(cls.mock_patient2)
         cls.mock_collected_patients.add_pillpack_patient(cls.mock_patient3)
