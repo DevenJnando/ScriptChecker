@@ -33,8 +33,6 @@ consts.DO_NOT_PRODUCE = 4
 consts.MANUALLY_CHECKED = 5
 consts.PRN_KEY = "prns_dict"
 consts.LINKED_MEDS_KEY = "linked_meds_dict"
-consts.COLLECTED_PATIENTS_FILE = 'Patients.pk1'
-consts.PRNS_AND_LINKED_MEDICATIONS_FILE = 'PrnsAndLinkedMeds.pk1'
 warning_constants = types.SimpleNamespace()
 warning_constants.PILLPACK_DATA_OVERWRITE_WARNING = "WARNING: You already have a pillpack production dataset open! " \
                                                     "If you reload the downloaded pillpack data, " \
@@ -51,9 +49,16 @@ bookmark_constants.MINOR_MISMATCH_PATIENTS_VIEW = 2
 bookmark_constants.SEVERE_MISMATCH_PATIENTS_VIEW = 3
 if getattr(sys, 'frozen', False):
     application_path = os.path.dirname(sys.executable)
+    objects_path = os.environ['APPDATA'] + "\\ScriptCheckerObjects"
+    if not os.path.exists(objects_path):
+        os.makedirs(objects_path)
 else:
     application_path = os.path.dirname(os.path.abspath(os.path.join(os.path.dirname(__file__))))
+    objects_path = application_path
 consts.APP_PATH = application_path
+consts.OBJECTS_PATH = objects_path
+consts.COLLECTED_PATIENTS_FILE = consts.OBJECTS_PATH + '\\Patients.pk1'
+consts.PRNS_AND_LINKED_MEDICATIONS_FILE = consts.OBJECTS_PATH + '\\PrnsAndLinkedMeds.pk1'
 
 
 def load_settings():

@@ -30,10 +30,14 @@ except Exception as e:
 
 if getattr(sys, 'frozen', False):
     script_dir = os.path.dirname(sys.executable)
+    logging_dir = os.environ['APPDATA'] + "\\ScriptCheckerLogs"
+    if not os.path.exists(logging_dir):
+        os.makedirs(logging_dir)
     logger.info("Script is running as a frozen executable at the following location: {0}"
                  .format(os.path.dirname(sys.executable)))
 else:
     script_dir = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))
+    logging_dir = script_dir
     logger.info("Script is running on the python interpreter at the following location: {0}"
                  .format(os.path.dirname(os.path.abspath(__file__))))
 
@@ -45,7 +49,7 @@ stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
 stdout_handler.setFormatter(formatter)
 
-file_handler = logging.FileHandler(script_dir + '\\logs.log')
+file_handler = logging.FileHandler(logging_dir + '\\logs.log')
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
 
