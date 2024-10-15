@@ -38,13 +38,6 @@ Future use-cases
 Launching Script Checker
 ============
 The latest release is available in the 'Releases' section of this repo.
-<<<<<<< HEAD
-Download the zip, extract, and navigate to the 'ScriptScanner.exe' file
-located in the 'ScriptScanner.dist' folder. 
-The application should then start.
-=======
-Download the zip, extract, and navigate to the 'scriptScannerGUI.exe' file
-located in the 'scriptScannerGUI.dist' folder. 
-The application should then start.
+Run the installer and script checker should start automatically upon installation.
 
 Note: This application is currently only compatible with Windows.
