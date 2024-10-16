@@ -10,7 +10,7 @@ logger = logging.getLogger()
 
 try:
     from multiprocessing import Queue
-    from tkinter import font, filedialog
+    from tkinter import font, filedialog, Toplevel, Label, Button
     from tkinter.ttk import Treeview
     from Functions.ModelFactory import get_patient_data_from_specific_file, get_patient_medicine_data_xml
     from DataStructures.Models import PillpackPatient, Medication
@@ -91,11 +91,23 @@ class App(tkinter.Tk):
         else:
             self.show_frame(consts.HOME_SCREEN)
             self.handler = WatchdogEventHandler(self)
-            self.current_directory_to_watch = (
-                self.filesystem_observer.schedule(self.handler, self.config["pillpackDataLocation"], recursive=False))
-            self.filesystem_observer.start()
-            logger.info("File system observer started in directory {0} successfully."
-                         .format(self.config["pillpackDataLocation"]))
+            try:
+                self.current_directory_to_watch = (
+                    self.filesystem_observer.schedule(self.handler, self.config["pillpackDataLocation"], recursive=False))
+                self.filesystem_observer.start()
+                logger.info("File system observer started in directory {0} successfully."
+                            .format(self.config["pillpackDataLocation"]))
+            except Exception as ex:
+                logger.exception("{0}".format(ex))
+                warning = Toplevel(master=self.master)
+                warning.attributes('-topmost', 'true')
+                warning.geometry("400x200")
+                warning_label = Label(warning, text="Failed to start filesystem observer...",
+                                      wraplength=300)
+                warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+                ok_button = Button(warning, text="OK", command=warning.destroy)
+                ok_button.grid(row=1, column=0, padx=50, sticky="ew", columnspan=2)
+                warning.grab_set()
 
     def show_frame(self, view_name: str, patient_to_view: PillpackPatient = None):
         match view_name:

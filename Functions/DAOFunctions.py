@@ -11,8 +11,13 @@ import logging
 
 
 def scan_pillpack_folder(filepath: str):
-    entities = scandir(filepath)
-    return list(filter(lambda entity: entity.is_file() and entity.name.split(".")[1] == "ppc_processed", entities))
+    entities = None
+    try:
+        entities = scandir(filepath)
+    except FileNotFoundError:
+        entities = list()
+    finally:
+        return list(filter(lambda entity: entity.is_file() and entity.name.split(".")[1] == "ppc_processed", entities))
 
 
 def archive_pillpack_production(archive_file, config, collected_patients: CollectedPatients):
@@ -22,8 +27,11 @@ def archive_pillpack_production(archive_file, config, collected_patients: Collec
         pillpack_directory = config["pillpackDataLocation"] + "\\"
         with ZipFile(archive_file.name, 'w') as archived_production_data:
             for file in ppc_processed_files:
-                os.remove(pillpack_directory + file.name)
-                logging.info("Removed file {0} from the pillpack directory {1}".format(file.name, pillpack_directory))
+                try:
+                    os.remove(pillpack_directory + file.name)
+                    logging.info("Removed file {0} from the pillpack directory {1}".format(file.name, pillpack_directory))
+                except FileNotFoundError as e:
+                    logging.exception("{0}\n Failed to located file...".format(e))
             save_to_file(collected_patients, archive_file_name)
             archived_production_data.write(archive_file_name)
             os.remove(archive_file_name)

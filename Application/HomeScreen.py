@@ -59,7 +59,7 @@ class HomeScreen(Frame):
                                       (self.master,
                                        self.open_populate_patients_window,
                                        warning_constants.PILLPACK_DATA_OVERWRITE_WARNING)
-                                              )
+                                      )
         load_pillpack_label.grid(row=1, column=0, sticky="nsew")
         load_pillpack_button.grid(row=2, column=0, sticky="nsew")
 

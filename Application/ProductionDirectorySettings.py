@@ -1,7 +1,7 @@
 import logging
 import tkinter
 import App
-from tkinter import Frame, Label, Button, StringVar, font, ttk
+from tkinter import Frame, Label, Button, StringVar, font, ttk, Toplevel
 
 from SideBar import SideBar
 from Application.WatchdogEventHandler import WatchdogEventHandler
@@ -43,10 +43,27 @@ class ViewPillpackProductionFolder(Frame):
         self.folder_location = self.master.config["pillpackDataLocation"]
         self.folder_location_string_var.set(self.folder_location)
         self.handler = WatchdogEventHandler(self.master)
-        self.master.filesystem_observer.unschedule(self.master.current_directory_to_watch)
-        self.master.current_directory_to_watch = (
-            self.master.filesystem_observer.schedule(self.handler, self.master.config["pillpackDataLocation"],
-                                                     recursive=False))
-        logging.info("File system observer started in directory {0} successfully."
-                     .format(self.master.config["pillpackDataLocation"]))
-        logging.info("ViewPillpackProductionFolder update function call complete.")
+        try:
+            self.master.filesystem_observer.unschedule(self.master.current_directory_to_watch)
+        except KeyError as e:
+            logging.exception("{0}".format(e))
+        try:
+            self.master.current_directory_to_watch = (
+                self.master.filesystem_observer.schedule(self.handler, self.master.config["pillpackDataLocation"],
+                                                         recursive=False))
+            if not self.master.filesystem_observer.is_alive():
+                self.master.filesystem_observer.start()
+        except Exception as e:
+            logging.exception("{0}".format(e))
+            warning = Toplevel(master=self.master)
+            warning.attributes('-topmost', 'true')
+            warning.geometry("400x200")
+            warning_label = Label(warning, text="Failed to start filesystem observer...",
+                                  wraplength=300)
+            warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+            ok_button = Button(warning, text="OK", command=warning.destroy)
+            ok_button.grid(row=1, column=0, padx=50, sticky="ew", columnspan=2)
+            warning.grab_set()
+            logging.info("File system observer started in directory {0} successfully."
+                         .format(self.master.config["pillpackDataLocation"]))
+            logging.info("ViewPillpackProductionFolder update function call complete.")
