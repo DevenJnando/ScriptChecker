@@ -159,37 +159,14 @@ def generate_patient_script_template(patient: PillpackPatient):
     return script_template
 
 
-def encode_prns_to_xml(patient: PillpackPatient):
+def encode_medications_to_xml(patient: PillpackPatient, dict_values_as_list: list, label_note: str):
     list_of_datamatrices: list = []
     script_template = generate_patient_script_template(patient)
     list_of_drugs_in_xml: list = []
-    for medication in patient.prns_for_current_cycle:
-        if isinstance(medication, Medication):
-            list_of_drugs_in_xml.append(encode_medication_to_xml(medication))
-    for drug in list_of_drugs_in_xml:
-        script_template += drug
-        script_template += "</xml>"
-        byte_count = bytearray(script_template, "utf8")
-        if len(byte_count) > 1555:
-            script_template = script_template.replace(drug, "")
-            list_of_datamatrices.append(script_template)
-            script_template = generate_patient_script_template(patient) + drug
-        else:
-            script_template = script_template.replace("</xml>", "")
-    script_template += "</xml>"
-    list_of_datamatrices.append(script_template)
-    return list_of_datamatrices
-
-
-def encode_matched_medications_to_xml(patient: PillpackPatient):
-    list_of_datamatrices: list = []
-    script_template = generate_patient_script_template(patient)
-    list_of_drugs_in_xml: list = []
-    dict_values_as_list: list = list(patient.matched_medications_dict.values())
     for i in range(0, len(dict_values_as_list)):
         medication = dict_values_as_list[i]
         if isinstance(medication, Medication):
-            list_of_drugs_in_xml.append(encode_medication_to_xml(medication))
+            list_of_drugs_in_xml.append(encode_medication_to_xml(medication, label_note))
     for drug in list_of_drugs_in_xml:
         script_template += drug
         script_template += "</xml>"
@@ -211,11 +188,12 @@ def encode_to_datamatrix(data_to_encode: str):
     return img
 
 
-def encode_medication_to_xml(med_to_encode: Medication):
+def encode_medication_to_xml(med_to_encode: Medication, label_note: str):
     encoded_medication: str = ""
-    medication_xml = '<dd d="{0}" do="{1}" c="{2}" q="{3}" dm="{4}" sq="{5}" u="{6}"/>'.format(
+    medication_xml = '<dd d="{0}" do="{1} {2}" c="{3}" q="{4}" dm="{5}" sq="{6}" u="{7}"/>'.format(
         med_to_encode.medication_name,
         med_to_encode.doctors_orders,
+        label_note,
         med_to_encode.code,
         int(med_to_encode.dosage),
         med_to_encode.disp_code,

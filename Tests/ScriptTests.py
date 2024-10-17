@@ -6,7 +6,7 @@ from PIL.Image import Image
 
 from DataStructures.Models import PillpackPatient, Medication
 from TestConsts import consts, load_test_settings, populate_test_settings
-from Functions.XML import scan_script, encode_prns_to_xml, encode_to_datamatrix, encode_matched_medications_to_xml
+from Functions.XML import scan_script, encode_to_datamatrix, encode_medications_to_xml
 
 
 class ScriptTests(unittest.TestCase):
@@ -204,7 +204,9 @@ class ScriptTests(unittest.TestCase):
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_1)
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_2)
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_3)
-        encoded_scripts: list = encode_prns_to_xml(self.mock_patient)
+        encoded_scripts: list = encode_medications_to_xml(self.mock_patient,
+                                                          self.mock_patient.prns_for_current_cycle,
+                                                          "(PRN)")
         for script in encoded_scripts:
             print(script)
         self.assertIsNotNone(encoded_scripts)
@@ -231,7 +233,9 @@ class ScriptTests(unittest.TestCase):
         self.mock_patient.add_medication_to_matched_dict(self.mock_medication_19)
         self.mock_patient.add_medication_to_matched_dict(self.mock_medication_20)
         self.mock_patient.add_medication_to_matched_dict(self.mock_medication_21)
-        encoded_scripts: list = encode_matched_medications_to_xml(self.mock_patient)
+        encoded_scripts: list = encode_medications_to_xml(self.mock_patient,
+                                                          list(self.mock_patient.matched_medications_dict.values()),
+                                                          "(Pillpack)")
         for script in encoded_scripts:
             print(script)
         self.assertIsNotNone(encoded_scripts)
@@ -240,7 +244,9 @@ class ScriptTests(unittest.TestCase):
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_1)
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_2)
         self.mock_patient.add_medication_to_prns_for_current_cycle(self.mock_medication_3)
-        encoded_scripts: list = encode_prns_to_xml(self.mock_patient)
+        encoded_scripts: list = encode_medications_to_xml(self.mock_patient,
+                                                          self.mock_patient.prns_for_current_cycle,
+                                                          "(PRN)")
         for script in encoded_scripts:
             encoded_image: Image = encode_to_datamatrix(script)
             self.assertIsNotNone(encoded_image)

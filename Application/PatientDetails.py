@@ -1,12 +1,12 @@
 import logging
 import tkinter
 import App
-from tkinter import Label, Button, Frame, LabelFrame, PhotoImage, font, ttk
+from tkinter import Label, Button, Frame, LabelFrame, PhotoImage, font, ttk, Toplevel
 from tkinter.constants import VERTICAL, Y
 
 from AppFunctions.CreateToolTip import create_tool_tip
 from Application.LinkMedication import LinkMedication
-from Functions.KardexAndPRNGeneration import generate_patient_kardex, generate_prn_list_for_current_cycle
+from Functions.KardexAndPRNGeneration import generate_patient_kardex, generate_dispensation_list_for_current_cycle
 from Application.UnlinkMedication import UnlinkMedication
 from Functions.ConfigSingleton import consts
 from Functions.DAOFunctions import save_collected_patients, update_current_prns_and_linked_medications
@@ -66,10 +66,7 @@ class PatientMedicationDetails(Frame):
                                                  self.master.group_production_name
                                              ))
         self.generate_prns_button = Button(self.display_frame, text="Generate Dispensation list",
-                                           command=lambda: generate_prn_list_for_current_cycle(
-                                               self.patient_object,
-                                               self.master.group_production_name
-                                           ))
+                                           command=self._check_if_manually_checked)
         manually_checked_toggle_label.grid(row=1, column=1)
         self.changes_toggle_button.grid(row=1, column=2)
         self.generate_kardex_button.grid(row=2, column=1)
@@ -115,6 +112,30 @@ class PatientMedicationDetails(Frame):
         logging.info("Patient Manually checked flag set to: {0}". format(self.patient_object.manually_checked_flag))
         save_collected_patients(self.master.collected_patients)
         self.master.app_observer.update_all()
+
+    def _check_if_manually_checked(self):
+        if self.patient_object.manually_checked_flag:
+            warning = Toplevel(master=self.master)
+            warning.attributes('-topmost', 'true')
+            warning.geometry("400x200")
+            warning_label = Label(warning, text="Warning: This patient has been marked as 'manually checked'. "
+                                                "Please make absolutely certain that this patient's medication "
+                                                "(pillpack and PRNs) are correct before generating a dispensation list.",
+                                  wraplength=300)
+            warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
+
+            ok_button = Button(warning, text="OK", command=lambda: [warning.destroy(),
+                                                                    generate_dispensation_list_for_current_cycle(
+                                                                        self.patient_object,
+                                                                        self.master.group_production_name)
+                                                                    ])
+            ok_button.grid(row=1, column=0, padx=50, sticky="ew")
+            cancel_button = Button(warning, text="Cancel", command=warning.destroy)
+            cancel_button.grid(row=1, column=1, padx=50, sticky="ew")
+
+            warning.grab_set()
+        else:
+            generate_dispensation_list_for_current_cycle(self.patient_object, self.master.group_production_name)
 
     def _refresh_patient_status(self):
         self.patient_object.determine_ready_to_produce_code()

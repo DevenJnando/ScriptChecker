@@ -9,7 +9,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.shared import Inches, Pt
 from docx.table import _Cell, Table
 
-from Functions.XML import encode_prns_to_xml, encode_to_datamatrix, encode_matched_medications_to_xml
+from Functions.XML import encode_to_datamatrix, encode_medications_to_xml
 from DataStructures.Models import Medication, PillpackPatient
 
 
@@ -76,6 +76,8 @@ def _format_cells_in_range(cells: list, bottom_range: int, top_range: int, is_bo
 
 def _set_cell(cell: _Cell, text: str, is_bold: bool = False, is_italic: bool = False, is_underlined: bool = False,
               font_size: int = None, alignment=None, spacing: float = None, spacing_rule=None):
+    if text is None:
+        text = ""
     cell.text = text
     if is_bold:
         cell.paragraphs[0].runs[0].bold = True
@@ -186,7 +188,7 @@ def create_kardex_doc_file():
 
 def datamatrix_builder(document: Document, patient: PillpackPatient, document_name: str,
                        medication_list: list, list_type: str,
-                       encoding_function: Callable[[PillpackPatient], list]):
+                       encoding_function: Callable[[PillpackPatient, list, str], list]):
     table = _create_table(document, 1, 4, 'Table Grid')
     table.columns[0].width = Inches(3.1)
     table.columns[1].width = Inches(1.0)
@@ -199,6 +201,7 @@ def datamatrix_builder(document: Document, patient: PillpackPatient, document_na
     _add_column_heading(header_cells[3], "Dispensed?", is_bold=True)
     for medication in medication_list:
         if isinstance(medication, Medication):
+            print(medication.medication_name)
             row_cells = table.add_row().cells
             _set_cell(row_cells[0], medication.medication_name, font_size=10,
                       spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
@@ -206,17 +209,7 @@ def datamatrix_builder(document: Document, patient: PillpackPatient, document_na
                       spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
             _set_cell(row_cells[2], medication.doctors_orders, font_size=10,
                       spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
-    meds_datamatrix = document.add_paragraph()
-    meds_as_xml: list = encoding_function(patient)
-    dm_text_run = meds_datamatrix.add_run()
-    if len(meds_as_xml) > 1:
-        dm_text_run.add_text("\n\n\nNOTE: The following datamatrices are to be used for dispensing ONLY."
-                             " They are NOT a suitable substitute "
-                             "for a medication prescription(s) issued by a qualified doctor.\n\n\n")
-    else:
-        dm_text_run.add_text("\n\n\nNOTE: The following datamatrix is to be used for dispensing ONLY. "
-                             "It is NOT a suitable substitute "
-                             "for a medication prescription issued by a qualified doctor.\n\n\n")
+    meds_as_xml: list = encoding_function(patient, medication_list, list_type)
     datamatrix_table = _create_container_table(document, 1, 1)
     datamatrix_table_cells = datamatrix_table.rows[0].cells
     datamatrix_table_paragraph = datamatrix_table_cells[0].add_paragraph()
@@ -226,15 +219,26 @@ def datamatrix_builder(document: Document, patient: PillpackPatient, document_na
         meds_as_datamatrix_pil = encode_to_datamatrix(encoded_xml)
         meds_as_datamatrix_pil.save(document_name + "_{0}_datamatrix_{1}.png".format(list_type, i))
         datamatrix = datamatrix_table_run.add_picture(document_name + "_{0}_datamatrix_{1}.png".format(list_type, i))
-        datamatrix.width = Inches(1.8)
-        datamatrix.height = Inches(1.8)
+        datamatrix.width = Inches(2)
+        datamatrix.height = Inches(2)
         os.remove(document_name + "_{0}_datamatrix_{1}.png".format(list_type, i))
+    meds_datamatrix = document.add_paragraph()
+    dm_text_run = meds_datamatrix.add_run()
+    if len(meds_as_xml) > 1:
+        dm_text_run.add_text("\n\n\nNOTE: The following datamatrices are to be used for dispensing ONLY."
+                             " They are NOT a suitable substitute "
+                             "for a medication prescription(s) issued by a qualified doctor.\n\n\n")
+    else:
+        dm_text_run.add_text("\n\n\nNOTE: The following datamatrix is to be used for dispensing ONLY. "
+                             "It is NOT a suitable substitute "
+                             "for a medication prescription issued by a qualified doctor.\n\n\n")
 
 
 def generate_dispensation_list_doc_file(patient: PillpackPatient, production_group_name: str, doc_name: str):
     prn_doc: Document = create_prn_list_doc_file()
     try:
-        prn_doc.add_heading("Pillpack Medications This Cycle", 0)
+        prn_doc.add_heading("Pillpack Medications This Cycle ({0} {1})".format(patient.first_name,
+                                                                               patient.last_name), 0)
         container_table = _create_container_table(prn_doc, 1, 3)
         container_table_cells = container_table.rows[0].cells
         _create_single_column_table(prn_doc, container_table_cells[0], "Patient Details:",
@@ -246,15 +250,22 @@ def generate_dispensation_list_doc_file(patient: PillpackPatient, production_gro
         _create_single_column_table(prn_doc, container_table_cells[2], "Important Info/Special Instructions:",
                                     ["", "Dispensation list generated on {0}".format(datetime.date.today())], 2.25,
                                     'Table Grid')
-        datamatrix_builder(prn_doc, patient, doc_name,
-                           list(patient.matched_medications_dict.values()),
-                           "Pillpack", encode_matched_medications_to_xml)
-        prn_doc.add_heading("PRNs This Cycle", 0)
-        datamatrix_builder(prn_doc, patient, doc_name,
-                           patient.prns_for_current_cycle, "PRNs",
-                           encode_prns_to_xml)
+        if patient.manually_checked_flag:
+            datamatrix_builder(prn_doc, patient, doc_name,
+                               list(patient.production_medications_dict.values()),
+                               "(Pillpack)", encode_medications_to_xml)
+        else:
+            datamatrix_builder(prn_doc, patient, doc_name,
+                               list(patient.matched_medications_dict.values()),
+                               "(Pillpack)", encode_medications_to_xml)
+        if len(patient.prns_for_current_cycle) > 0:
+            prn_doc.add_heading("PRNs This Cycle({0} {1})".format(patient.first_name,
+                                                                  patient.last_name), 0)
+            datamatrix_builder(prn_doc, patient, doc_name,
+                               patient.prns_for_current_cycle, "(PRN)",
+                               encode_medications_to_xml)
     except Exception as e:
-        logging.error(e)
+        logging.exception(e)
     finally:
         save_doc_file(prn_doc, doc_name)
 

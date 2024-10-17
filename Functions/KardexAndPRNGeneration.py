@@ -17,7 +17,7 @@ def generate_patient_kardex(patient: PillpackPatient, production_name: str):
         generate_kardex_doc_file(patient, production_name, kardex_file.name)
 
 
-def generate_prn_list_for_current_cycle(patient: PillpackPatient, production_name: str):
+def generate_dispensation_list_for_current_cycle(patient: PillpackPatient, production_name: str):
     default_file_name = "{0} {1} {2} {3} generated Dispensation list".format(
         patient.first_name,
         patient.last_name,
