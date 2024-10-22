@@ -201,7 +201,6 @@ def datamatrix_builder(document: Document, patient: PillpackPatient, document_na
     _add_column_heading(header_cells[3], "Dispensed?", is_bold=True)
     for medication in medication_list:
         if isinstance(medication, Medication):
-            print(medication.medication_name)
             row_cells = table.add_row().cells
             _set_cell(row_cells[0], medication.medication_name, font_size=10,
                       spacing=1, spacing_rule=WD_LINE_SPACING.SINGLE)
@@ -246,7 +245,8 @@ def generate_dispensation_list_doc_file(patient: PillpackPatient, production_gro
                                      "Date of Birth: {0}".format(patient.date_of_birth)], 2.25)
         _create_single_column_table(prn_doc, container_table_cells[1],
                                     "Production Group: {0}".format(production_group_name),
-                                    ["Surgery: {0}".format(patient.surgery)], 2.25)
+                                    ["Surgery: {0}".format(patient.surgery), "Address: {0}".format(patient.address)],
+                                    2.25)
         _create_single_column_table(prn_doc, container_table_cells[2], "Important Info/Special Instructions:",
                                     ["", "Dispensation list generated on {0}".format(datetime.date.today())], 2.25,
                                     'Table Grid')
@@ -281,7 +281,7 @@ def generate_kardex_doc_file(patient: PillpackPatient, production_group_name: st
                                      "Date of Birth: {0}".format(patient.date_of_birth)], 3.55)
         _create_single_column_table(kardex_doc, container_table_cells[1],
                                     "Production Group: {0}".format(production_group_name),
-                                    ["Surgery: {0}".format(patient.surgery)],
+                                    ["Surgery: {0}".format(patient.surgery), "Address: {0}".format(patient.address)],
                                     3.55)
         _create_single_column_table(kardex_doc, container_table_cells[2], "Important Info/Special Instructions:",
                                     ["", "New kardex generated on {0}".format(datetime.date.today()),

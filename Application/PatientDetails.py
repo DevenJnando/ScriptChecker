@@ -6,6 +6,7 @@ from tkinter.constants import VERTICAL, Y
 
 from AppFunctions.CreateToolTip import create_tool_tip
 from Application.LinkMedication import LinkMedication
+from Application.PatientDispensationDetails import PatientDispensationDetails
 from Functions.KardexAndPRNGeneration import generate_patient_kardex, generate_dispensation_list_for_current_cycle
 from Application.UnlinkMedication import UnlinkMedication
 from Functions.ConfigSingleton import consts
@@ -125,9 +126,7 @@ class PatientMedicationDetails(Frame):
             warning_label.grid(row=0, column=0, pady=25, sticky="ew", columnspan=2)
 
             ok_button = Button(warning, text="OK", command=lambda: [warning.destroy(),
-                                                                    generate_dispensation_list_for_current_cycle(
-                                                                        self.patient_object,
-                                                                        self.master.group_production_name)
+                                                                    self._check_if_any_scripts_are_scanned()
                                                                     ])
             ok_button.grid(row=1, column=0, padx=50, sticky="ew")
             cancel_button = Button(warning, text="Cancel", command=warning.destroy)
@@ -137,8 +136,14 @@ class PatientMedicationDetails(Frame):
         else:
             generate_dispensation_list_for_current_cycle(self.patient_object, self.master.group_production_name)
 
-    def _refresh_patient_status(self):
-        self.patient_object.determine_ready_to_produce_code()
+    def _check_if_any_scripts_are_scanned(self):
+        if len(self.patient_object.matched_medications_dict) > 0:
+            generate_dispensation_list_for_current_cycle(self.patient_object, self.master.group_production_name)
+        else:
+            window = PatientDispensationDetails(self, self.master, self.patient_object,
+                                                generate_dispensation_list_for_current_cycle)
+            window.grab_set()
+            window.attributes('-topmost', 'true')
 
     def check_if_patient_is_ready_for_production(self):
         if self.patient_object.manually_checked_flag:
@@ -229,11 +234,11 @@ class PatientMedicationDetails(Frame):
                 if self.patient_object.linked_medications.__contains__(medication.medication_name):
                     linked_medication: Medication = self.patient_object.linked_medications[medication.medication_name]
                     link_icon_label = Label(label_frame_to_populate, image=self.linked_medication_image)
-                    link_icon_label.grid(row=i + 1, column=2)
+                    link_icon_label.grid(row=i + 1, column=3)
                     unlink_button = Button(label_frame_to_populate, text="Unlink",
                                            command=lambda e=medication: self.open_unlink_medication_view(
                                                e.medication_name))
-                    unlink_button.grid(row=i + 1, column=3)
+                    unlink_button.grid(row=i + 1, column=4)
                     create_tool_tip(link_icon_label, text=linked_medication.medication_name)
                     logging.info("Medication {0} is linked to medication {1}."
                                  .format(medication.medication_name, linked_medication.medication_name))
@@ -389,7 +394,7 @@ class PatientMedicationDetails(Frame):
 
     def update(self):
         logging.info("PatientMedicationDetails update function called.")
-        self._refresh_patient_status()
+        self.patient_object.determine_ready_to_produce_code()
         if (len(self.patient_object.matched_medications_dict) != len(self.patient_object.production_medications_dict)
                 and not self.patient_object.manually_checked_flag):
             self.generate_prns_button.configure(state="disabled")

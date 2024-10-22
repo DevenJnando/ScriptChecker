@@ -64,13 +64,13 @@ def check_if_patient_is_in_pillpack_production(pillpack_patient_dict: dict,
     if isinstance(pillpack_patient_dict, dict) and isinstance(script_patient, PillpackPatient):
         matched_patient = query_pillpack_patient_list(pillpack_patient_dict, script_patient)
         if isinstance(matched_patient, PillpackPatient):
-            matched_patient.surgery = script_patient.surgery
+            matched_patient.update_if_equal(script_patient)
             check_script_medications_against_pillpack(matched_patient, script_patient, collected_patients)
             collected_patients.add_patient(matched_patient, consts.PERFECT_MATCH)
             collected_patients.add_matched_patient(matched_patient)
         elif isinstance(matched_patient, list) and len(matched_patient) > 0:
             for patient in matched_patient:
-                patient.surgery = script_patient.surgery
+                patient.update_if_equal(script_patient)
                 check_script_medications_against_pillpack(patient, script_patient, collected_patients)
                 collected_patients.add_patient(patient, consts.IMPERFECT_MATCH)
                 collected_patients.add_minor_mismatched_patient(patient)
@@ -212,7 +212,7 @@ def extend_existing_patient_medication_dict(patient_object: PillpackPatient, col
                 match patient_wrapper["Status"]:
                     case consts.PERFECT_MATCH:
                         if unwrapped_patient.__eq__(patient_object):
-                            unwrapped_patient.surgery = patient_object.surgery
+                            unwrapped_patient.update_if_equal(patient_object)
                             check_script_medications_against_pillpack(unwrapped_patient, patient_object,
                                                                       collected_patients)
                             exists = True
@@ -222,7 +222,7 @@ def extend_existing_patient_medication_dict(patient_object: PillpackPatient, col
                             break
                         elif (unwrapped_patient.last_name == patient_object.last_name
                                 and unwrapped_patient.first_name == patient_object.first_name):
-                            unwrapped_patient.surgery = patient_object.surgery
+                            unwrapped_patient.update_if_equal(patient_object)
                             check_script_medications_against_pillpack(unwrapped_patient, patient_object,
                                                                       collected_patients)
                             exists = True
@@ -236,7 +236,7 @@ def extend_existing_patient_medication_dict(patient_object: PillpackPatient, col
                     case consts.IMPERFECT_MATCH:
                         if (unwrapped_patient.last_name == patient_object.last_name
                                 and unwrapped_patient.first_name == patient_object.first_name):
-                            unwrapped_patient.surgery = patient_object.surgery
+                            unwrapped_patient.update_if_equal(patient_object)
                             check_script_medications_against_pillpack(unwrapped_patient, patient_object,
                                                                       collected_patients)
                             exists = True

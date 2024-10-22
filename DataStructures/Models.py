@@ -236,8 +236,26 @@ class PillpackPatient:
         return hash((self.first_name, self.last_name, self.date_of_birth))
 
     def __eq__(self, other):
-        return ((self.first_name, self.last_name, self.date_of_birth)
-                == (other.first_name, other.last_name, other.date_of_birth))
+        return self.__hash__() == other.__hash__()
+
+    def update_if_equal(self, other):
+        if self.__eq__(other) or (self.first_name == other.first_name
+                                  and self.last_name == other.last_name):
+            self.script_id = other.script_id
+            self.script_issuer = other.script_issuer
+            self.script_date = other.script_date
+            self.middle_name = other.middle_name
+            self.healthcare_no = other.healthcare_no
+            self.title = other.title
+            self.script_no = other.script_no
+            self.address = other.address
+            self.postcode = other.postcode
+            self.doctor_id_no = other.doctor_id_no
+            self.doctor_name = other.doctor_name
+            self.surgery_id_no = other.surgery_id_no
+            self.surgery = other.surgery
+            self.surgery_address = other.surgery_address
+            self.surgery_postcode = other.surgery_postcode
 
     def __ne__(self, other):
-        return not (self == other)
+        return not (self.__hash__() == other.__hash__())
