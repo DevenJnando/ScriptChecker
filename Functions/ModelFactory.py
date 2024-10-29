@@ -28,13 +28,14 @@ def get_patient_medicine_data_ppc(prns_and_linked_medications: dict, separating_
             list_of_orders: list = reduce(list.__add__, parse_xml_ppc(list_of_orders_raw_text))
             for order in list_of_orders:
                 patient_object = create_patient_object_from_pillpack_data(order)
-                patient_object = retrieve_prns_and_linked_medications(patient_object, prns_and_linked_medications)
-                match earliest_start_date:
-                    case None:
-                        add_patient_to_dict(patient_object, dict_of_patients)
-                    case _:
-                        if patient_object.start_date >= earliest_start_date:
+                if patient_object is not None:
+                    patient_object = retrieve_prns_and_linked_medications(patient_object, prns_and_linked_medications)
+                    match earliest_start_date:
+                        case None:
                             add_patient_to_dict(patient_object, dict_of_patients)
+                        case _:
+                            if patient_object.start_date >= earliest_start_date:
+                                add_patient_to_dict(patient_object, dict_of_patients)
         return dict_of_patients
 
 

@@ -236,15 +236,21 @@ def create_patient_object_from_pillpack_data(order_element):
         medication_items: list = order_element.getElementsByTagName("MedItem")
         start_date_list: list = []
         for medication in medication_items:
-            medication_object = generate_medication_dict(medication)
+            medication_object: Medication = generate_medication_dict(medication)
+            print(medication_object.medication_name)
+            print(medication_object.start_date)
             start_date_list.append(medication_object.start_date)
             if isinstance(medication_object, Medication):
                 update_medication_dosage(patient_object, medication_object)
                 patient_object.add_medication_to_production_dict(medication_object)
 
         """Sets the start date for the patient's medication cycle as the earliest date relative to now."""
-        patient_object.set_start_date(min(start_date_list))
-        return patient_object
+        print(start_date_list)
+        if len(start_date_list) > 0:
+            patient_object.set_start_date(min(start_date_list))
+            return patient_object
+        else:
+            return None
     else:
         logging.error("The order parameter: {0} is not a valid XML element. Actual type is {1}"
                       .format(order_element, type(order_element)))
