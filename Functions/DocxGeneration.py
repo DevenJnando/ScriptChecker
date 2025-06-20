@@ -248,7 +248,8 @@ def generate_dispensation_list_doc_file(patient: PillpackPatient, production_gro
                                     ["Surgery: {0}".format(patient.surgery), "Address: {0}".format(patient.address)],
                                     2.25)
         _create_single_column_table(prn_doc, container_table_cells[2], "Important Info/Special Instructions:",
-                                    ["", "Dispensation list generated on {0}".format(datetime.date.today())], 2.25,
+                                    ["Date on script: {0}".format(patient.script_date),
+                                     "Dispensation list generated on {0}".format(datetime.date.today())], 2.25,
                                     'Table Grid')
         if patient.manually_checked_flag:
             datamatrix_builder(prn_doc, patient, doc_name,

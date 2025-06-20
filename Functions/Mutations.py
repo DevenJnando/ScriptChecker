@@ -64,13 +64,15 @@ def check_if_patient_is_in_pillpack_production(pillpack_patient_dict: dict,
     if isinstance(pillpack_patient_dict, dict) and isinstance(script_patient, PillpackPatient):
         matched_patient = query_pillpack_patient_list(pillpack_patient_dict, script_patient)
         if isinstance(matched_patient, PillpackPatient):
-            matched_patient.update_if_equal(script_patient)
+            if compare_patient_details(matched_patient, script_patient):
+                matched_patient.update_fields(script_patient)
             check_script_medications_against_pillpack(matched_patient, script_patient, collected_patients)
             collected_patients.add_patient(matched_patient, consts.PERFECT_MATCH)
             collected_patients.add_matched_patient(matched_patient)
         elif isinstance(matched_patient, list) and len(matched_patient) > 0:
             for patient in matched_patient:
-                patient.update_if_equal(script_patient)
+                if compare_patient_details(patient, script_patient):
+                    patient.update_fields(script_patient)
                 check_script_medications_against_pillpack(patient, script_patient, collected_patients)
                 collected_patients.add_patient(patient, consts.IMPERFECT_MATCH)
                 collected_patients.add_minor_mismatched_patient(patient)
@@ -106,19 +108,6 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
                 patient_from_production.add_medication_to_incorrect_dosage_dict(script_medication)
                 logging.info("Medications match, but dosages are inconsistent. Adding medication {0} to "
                              "incorrect dosages dictionary.".format(script_medication.medication_name))
-        elif not patient_from_script.production_medications_dict.__contains__(medication):
-            if not patient_from_production.matched_medications_dict.__contains__(medication):
-                substring_results = [key for key in patient_from_production.matched_medications_dict.keys()
-                                     if medication in key]
-                if len(substring_results) == 0:
-                    if (not patient_from_production.prn_medications_dict.__contains__(medication)
-                            and not patient_from_production.medications_to_ignore.__contains__(medication)
-                            and not check_for_medication_linkage(patient_from_production.linked_medications, medication)):
-                        patient_from_production.add_medication_to_missing_dict(full_medication_dict[medication])
-                        logging.info("Medication {0} is not present on the scanned script. "
-                                     "No exceptions for this medication exist. "
-                                     "Adding to the missing medication dictionary."
-                                     .format(medication))
     for medication in script_medication_dict.keys():
         substring_results = [key for key in full_medication_dict.keys() if key in medication]
         if len(substring_results) > 0:
@@ -130,7 +119,7 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
         else:
             if not full_medication_dict.__contains__(medication):
                 if patient_from_production.prn_medications_dict.__contains__(medication):
-                    prn_medication: Medication = patient_from_production.prn_medications_dict[medication]
+                    prn_medication: Medication = patient_from_script.production_medications_dict[medication]
                     patient_from_production.add_medication_to_prns_for_current_cycle(prn_medication)
                 linked_medication: Medication = check_for_linked_medications(script_medication_dict[medication],
                                                                              patient_from_production.linked_medications)
@@ -147,6 +136,7 @@ def check_script_medications_against_pillpack(patient_from_production: PillpackP
                                  "Adding medication to unknown medications dictionary."
                                  .format(medication,
                                          patient_from_production.first_name, patient_from_production.last_name))
+    patient_from_production.add_all_missing_medications()
     collected_patients.update_pillpack_patient_dict(patient_from_production)
 
 
@@ -154,16 +144,6 @@ def clear_medication_warning_dicts(patient: PillpackPatient, medication: Medicat
     patient.remove_medication_from_missing_dict(medication)
     patient.remove_medication_from_incorrect_dosage_dict(medication)
     patient.remove_medication_from_unknown_dict(medication)
-
-
-def check_for_medication_linkage(linked_dict: dict, medication: Medication):
-    linkage_exists: bool = False
-    for value in linked_dict.values():
-        if isinstance(value, Medication):
-            if medication.__eq__(value):
-                linkage_exists = True
-                break
-    return linkage_exists
 
 
 def check_for_linked_medications(medication_to_check: Medication, linked_medication_dict: dict):
@@ -212,7 +192,8 @@ def extend_existing_patient_medication_dict(patient_object: PillpackPatient, col
                 match patient_wrapper["Status"]:
                     case consts.PERFECT_MATCH:
                         if unwrapped_patient.__eq__(patient_object):
-                            unwrapped_patient.update_if_equal(patient_object)
+                            if compare_patient_details(unwrapped_patient, patient_object):
+                                unwrapped_patient.update_fields(patient_object)
                             check_script_medications_against_pillpack(unwrapped_patient, patient_object,
                                                                       collected_patients)
                             exists = True
@@ -222,7 +203,8 @@ def extend_existing_patient_medication_dict(patient_object: PillpackPatient, col
                             break
                         elif (unwrapped_patient.last_name == patient_object.last_name
                                 and unwrapped_patient.first_name == patient_object.first_name):
-                            unwrapped_patient.update_if_equal(patient_object)
+                            if compare_patient_details(unwrapped_patient, patient_object):
+                                unwrapped_patient.update_fields(patient_object)
                             check_script_medications_against_pillpack(unwrapped_patient, patient_object,
                                                                       collected_patients)
                             exists = True
@@ -236,7 +218,8 @@ def extend_existing_patient_medication_dict(patient_object: PillpackPatient, col
                     case consts.IMPERFECT_MATCH:
                         if (unwrapped_patient.last_name == patient_object.last_name
                                 and unwrapped_patient.first_name == patient_object.first_name):
-                            unwrapped_patient.update_if_equal(patient_object)
+                            if compare_patient_details(unwrapped_patient, patient_object):
+                                unwrapped_patient.update_fields(patient_object)
                             check_script_medications_against_pillpack(unwrapped_patient, patient_object,
                                                                       collected_patients)
                             exists = True

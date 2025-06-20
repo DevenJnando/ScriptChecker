@@ -22,21 +22,28 @@ def scan_pillpack_folder(filepath: str):
 
 def archive_pillpack_production(archive_file, config, collected_patients: CollectedPatients):
     if config is not None:
-        archive_file_name = "archived_production_{0}.pk1".format(datetime.today().date())
+        archive_file_name = consts.OBJECTS_PATH + "archived_production_{0}.pk1".format(datetime.today().date())
         ppc_processed_files = scan_pillpack_folder(config["pillpackDataLocation"])
         pillpack_directory = config["pillpackDataLocation"] + "\\"
-        with ZipFile(archive_file.name, 'w') as archived_production_data:
+        with ZipFile(archive_file.name, 'a') as archived_production_data:
             for file in ppc_processed_files:
                 try:
                     os.remove(pillpack_directory + file.name)
                     logging.info("Removed file {0} from the pillpack directory {1}".format(file.name, pillpack_directory))
                 except FileNotFoundError as e:
                     logging.exception("{0}\n Failed to located file...".format(e))
-            save_to_file(collected_patients, archive_file_name)
-            archived_production_data.write(archive_file_name)
-            os.remove(archive_file_name)
-            os.remove(consts.COLLECTED_PATIENTS_FILE)
-            logging.info("Removed the pickle file of this production")
+            try:
+                save_to_file(collected_patients, archive_file_name)
+                archived_production_data.write(archive_file_name)
+                logging.info("Archived patient pickle file successfully.")
+            except Exception as e:
+                logging.error("Failed to write to production archive... {0}".format(e))
+            try:
+                os.remove(archive_file_name)
+                os.remove(consts.COLLECTED_PATIENTS_FILE)
+                logging.info("Removed the pickle file of this production")
+            except Exception as e:
+                logging.error("Failed to remove archive file and collected patients pickle file... {0}".format(e))
 
 
 def load_object(object_file_name: str):
@@ -77,6 +84,7 @@ def load_collected_patients_from_object():
 
 
 def load_prns_and_linked_medications_from_object():
+    print(consts.PRNS_AND_LINKED_MEDICATIONS_FILE)
     prns_and_linked_medications: dict = load_object(consts.PRNS_AND_LINKED_MEDICATIONS_FILE)
     if prns_and_linked_medications is None:
         prns_and_linked_medications = {}
@@ -107,14 +115,18 @@ def update_current_prns_and_linked_medications(patient: PillpackPatient,
 
 
 def retrieve_prns_and_linked_medications(patient: PillpackPatient, prns_and_linked_medications: dict):
-    key = patient.first_name + " " + patient.last_name + " " + str(patient.date_of_birth)
-    if prns_and_linked_medications.__contains__(key.lower()):
-        patient.prn_medications_dict = prns_and_linked_medications[key.lower()][consts.PRN_KEY]
-        patient.linked_medications = prns_and_linked_medications[key.lower()][consts.LINKED_MEDS_KEY]
+    key = patient.first_name.lower() + " " + patient.last_name.lower() + " " + str(patient.date_of_birth)
+    if prns_and_linked_medications.__contains__(key):
+        patient.prn_medications_dict = prns_and_linked_medications[key][consts.PRN_KEY]
+        patient.linked_medications = prns_and_linked_medications[key][consts.LINKED_MEDS_KEY]
     return patient
 
 
 def save_to_file(object_to_save, filename):
     with open(filename, 'wb') as output:
-        pickle.dump(object_to_save, output, pickle.HIGHEST_PROTOCOL)
-        logging.info("Saved object {0} to pickle file {1} successfully.".format(object_to_save, filename))
+        try:
+            pickle.dump(object_to_save, output, pickle.HIGHEST_PROTOCOL)
+            logging.info("Saved object {0} to pickle file {1} successfully.".format(object_to_save, filename))
+        except Exception as e:
+            logging.error("Failed to save object {0} to pickle file {1} due to exception {2}"
+                          .format(object_to_save, filename, e))

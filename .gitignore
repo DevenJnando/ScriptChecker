@@ -1,4 +1,8 @@
 Patients.pk1
-PrnsAndIgnoredMeds.pk1
-./dist
-scriptScannerGUI.spec
+logs.log
+PrnsAndLinkedMeds.pk1
+build/
+dist/
+App.spec
+__pycache__/
+.idea/

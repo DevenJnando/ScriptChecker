@@ -16,43 +16,34 @@ def _create_datetime(date_string: str):
 
 
 def get_medication_take_times(time_of_day: str, no_of_meds_to_take: float, medication: Medication):
-    match time_of_day:
-        case "MORNING":
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
-                medication.morning_dosage = no_of_meds_to_take
-        case "Morning":
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
-                medication.morning_dosage = no_of_meds_to_take
-        case "AFTERNOON":
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
-                medication.afternoon_dosage = no_of_meds_to_take
-        case "Midday":
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
-                medication.afternoon_dosage = no_of_meds_to_take
-        case "EVENING":
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
-                medication.evening_dosage = no_of_meds_to_take
-        case "NIGHT":
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
-                medication.night_dosage = no_of_meds_to_take
-        case "Bedtime":
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
-                medication.night_dosage = no_of_meds_to_take
-        case _:
+    standardised_time_of_day = time_of_day.lower()
+    morning = "morning"
+    breakfast = "breakfast"
+    afternoon = "afternoon"
+    midday = "midday"
+    lunchtime = "lunch"
+    evening = "evening"
+    dinnertime = "dinner"
+    night = "night"
+    bedtime = "bedtime"
+    is_morning = standardised_time_of_day == morning or standardised_time_of_day == breakfast
+    is_afternoon = (standardised_time_of_day == afternoon or standardised_time_of_day == midday
+                    or standardised_time_of_day == lunchtime)
+    is_evening = standardised_time_of_day == evening or standardised_time_of_day == dinnertime
+    is_night = standardised_time_of_day == night or standardised_time_of_day == bedtime
+
+    if no_of_meds_to_take != 0.0:
+        if no_of_meds_to_take % 1 == 0:
+            no_of_meds_to_take = int(no_of_meds_to_take)
+        if is_morning:
+            medication.morning_dosage = no_of_meds_to_take
+        elif is_afternoon:
+            medication.afternoon_dosage = no_of_meds_to_take
+        elif is_evening:
+            medication.evening_dosage = no_of_meds_to_take
+        elif is_night:
+            medication.night_dosage = no_of_meds_to_take
+        else:
             get_specified_medication_take_times(time_of_day, no_of_meds_to_take, medication)
 
 
@@ -61,25 +52,16 @@ def get_specified_medication_take_times(time_of_day: str, no_of_meds_to_take: fl
         time_of_day_as_int: int = int(time_of_day.split("H")[0])
         hours = time_of_day_as_int
         mins = time_of_day.split("H")[1]
-        if 0 <= time_of_day_as_int < 12:
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
+        if no_of_meds_to_take != 0.0:
+            if no_of_meds_to_take % 1 == 0:
+                no_of_meds_to_take = int(no_of_meds_to_take)
+            if 0 <= time_of_day_as_int < 12:
                 medication.morning_dosage = str(no_of_meds_to_take) + "\n({0}:{1})".format(hours, mins)
-        elif 12 <= time_of_day_as_int < 17:
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
+            elif 12 <= time_of_day_as_int < 17:
                 medication.afternoon_dosage = str(no_of_meds_to_take) + "\n({0}:{1})".format(hours, mins)
-        elif 17 <= time_of_day_as_int < 20:
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
+            elif 17 <= time_of_day_as_int < 20:
                 medication.evening_dosage = str(no_of_meds_to_take) + "\n({0}:{1})".format(hours, mins)
-        elif 20 <= time_of_day_as_int < 23:
-            if no_of_meds_to_take != 0.0:
-                if no_of_meds_to_take % 1 == 0:
-                    no_of_meds_to_take = int(no_of_meds_to_take)
+            elif 20 <= time_of_day_as_int < 23:
                 medication.night_dosage = str(no_of_meds_to_take) + "\n({0}:{1})".format(hours, mins)
     except ValueError as e:
         logging.error(e)
@@ -237,15 +219,12 @@ def create_patient_object_from_pillpack_data(order_element):
         start_date_list: list = []
         for medication in medication_items:
             medication_object: Medication = generate_medication_dict(medication)
-            print(medication_object.medication_name)
-            print(medication_object.start_date)
             start_date_list.append(medication_object.start_date)
             if isinstance(medication_object, Medication):
                 update_medication_dosage(patient_object, medication_object)
                 patient_object.add_medication_to_production_dict(medication_object)
 
         """Sets the start date for the patient's medication cycle as the earliest date relative to now."""
-        print(start_date_list)
         if len(start_date_list) > 0:
             patient_object.set_start_date(min(start_date_list))
             return patient_object

@@ -5,6 +5,11 @@ import types
 
 import yaml
 
+"""
+Singleton which contains all constants used by the rest of the application. Contains a function to load an existing
+config file and a function to change the default pillpack production location on the file system.
+"""
+
 consts = types.SimpleNamespace()
 consts.PERFECT_MATCH = "PERFECT_MATCH"
 consts.IMPERFECT_MATCH = "IMPERFECT_MATCH"

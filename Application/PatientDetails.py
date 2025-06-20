@@ -351,8 +351,8 @@ class PatientMedicationDetails(Frame):
     def set_medication_as_prn(self, selected_medication: Medication, medication_dict: dict):
         if medication_dict.__contains__(selected_medication.medication_name):
             medication_dict.pop(selected_medication.medication_name)
-        self.patient_object.add_medication_to_prns_for_current_cycle(selected_medication)
         self.patient_object.add_medication_to_prn_dict(selected_medication)
+        self.patient_object.add_medication_to_prns_for_current_cycle(selected_medication)
         save_collected_patients(self.master.collected_patients)
         update_current_prns_and_linked_medications(self.patient_object,
                                                    self.master.collected_patients,
